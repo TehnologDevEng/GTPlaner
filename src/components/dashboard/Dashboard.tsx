@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
 import { Task } from '@/types';
+import { FlipClock } from './FlipClock';
 
 const quotes = [
   { text: "Секрет того, чтобы вырваться вперед, заключается в том, чтобы начать.", author: "Марк Твен" },
@@ -13,7 +14,35 @@ const quotes = [
   { text: "У вас есть враги? Хорошо. Значит, вы в своей жизни что-то когда-то отстаивали.", author: "Уинстон Черчилль" },
   { text: "Мы хозяева нашей несказанной мысли, но рабы того, что позволили себе сказать.", author: "Уинстон Черчилль" },
   { text: "Лучший способ предсказать будущее — создать его.", author: "Питер Друкер" },
-  { text: "То, что не начато сегодня, не будет закончено завтра.", author: "Иоганн Вольфганг фон Гете" }
+  { text: "То, что не начато сегодня, не будет закончено завтра.", author: "Иоганн Вольфганг фон Гете" },
+  { text: "Ваше время ограничено, не тратьте его, проживая чужую жизнь.", author: "Стив Джобс" },
+  { text: "Единственный способ делать великие дела — любить то, что вы делаете.", author: "Стив Джобс" },
+  { text: "То, что мы делаем сегодня, определяет то, кем мы станем завтра.", author: "Марк Аврелий" },
+  { text: "Препятствие на пути становится самим путем.", author: "Марк Аврелий" },
+  { text: "Сложнее всего начать действовать, все остальное зависит только от упорства.", author: "Амелия Эрхарт" },
+  { text: "Не ждите. Время никогда не будет «идеальным».", author: "Наполеон Хилл" },
+  { text: "Логика приведет вас из пункта А в пункт Б. Воображение приведет вас куда угодно.", author: "Альберт Эйнштейн" },
+  { text: "Стремитесь не к тому, чтобы добиться успеха, а к тому, чтобы ваша жизнь имела смысл.", author: "Альберт Эйнштейн" },
+  { text: "Начинайте там, где вы есть. Используйте то, что у вас есть. Делайте то, что можете.", author: "Артур Эш" },
+  { text: "Через год вы будете жалеть, что не начали сегодня.", author: "Карен Лэмб" },
+  { text: "Либо вы управляете днем, либо день управляет вами.", author: "Джим Рон" },
+  { text: "Делай, что можешь, с тем, что имеешь, там, где ты есть.", author: "Теодор Рузвельт" },
+  { text: "Успех — это сумма небольших усилий, повторяющихся изо дня в день.", author: "Роберт Коллиер" },
+  { text: "Дисциплина — это мост между целями и достижениями.", author: "Джим Рон" },
+  { text: "Те, кто достаточно безумен, чтобы думать, что могут изменить мир, как раз и меняют его.", author: "Стив Джобс" },
+  { text: "То, что кажется нам горькими испытаниями, часто является скрытым благословением.", author: "Оскар Уайльд" },
+  { text: "Чем больше я работаю, тем больше мне везет.", author: "Томас Джефферсон" },
+  { text: "Счастье не в том, чтобы делать всегда то, что хочешь, а в том, чтобы всегда хотеть того, что делаешь.", author: "Лев Толстой" },
+  { text: "Если вы идете сквозь ад — идите не останавливаясь.", author: "Уинстон Черчилль" },
+  { text: "Успех — это способность шагать от одной неудачи к другой, не теряя энтузиазма.", author: "Уинстон Черчилль" },
+  { text: "Вы никогда не дойдете до места назначения, если будете бросать камень в каждую лающую собаку.", author: "Уинстон Черчилль" },
+  { text: "Преодоленные трудности — это выигранные возможности.", author: "Уинстон Черчилль" },
+  { text: "Бесполезно говорить: «Мы делаем всё, что можем». Надо сделать то, что необходимо.", author: "Уинстон Черчилль" },
+  { text: "Мужество — это то, что требуется, чтобы встать и сказать; мужество — это также то, что требуется, чтобы сесть и выслушать.", author: "Уинстон Черчилль" },
+  { text: "Я всегда готов учиться, но мне не всегда нравится, когда меня учат.", author: "Уинстон Черчилль" },
+  { text: "Ответственность — это та цена, которую мы платим за величие.", author: "Уинстон Черчилль" },
+  { text: "Если мы откроем спор между прошлым и настоящим, то обнаружим, что потеряли будущее.", author: "Уинстон Черчилль" },
+  { text: "Планы мало что значат, но планирование — это всё.", author: "Уинстон Черчилль" }
 ];
 
 interface Props {
@@ -22,6 +51,7 @@ interface Props {
 
 export function Dashboard({ tasks }: Props) {
   const [quote, setQuote] = useState(quotes[0]);
+  const [playerMode, setPlayerMode] = useState<'radio' | 'soundcloud'>('radio');
 
   useEffect(() => {
     const randomIndex = Math.floor(Math.random() * quotes.length);
@@ -52,10 +82,12 @@ export function Dashboard({ tasks }: Props) {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
         {/* Date / Time Card */}
-        <div className="bg-[#161618] border border-[#2A2A2A] rounded-2xl p-6 flex flex-col justify-center items-start">
-          <p className="text-[#8A8F98] text-sm uppercase tracking-wider mb-2">Сегодня</p>
-          <h2 className="text-4xl font-bold text-[#F7F8F8] tracking-tight">{today}</h2>
-          <p className="text-5xl font-light text-[#00BCC5] mt-4 tracking-tighter">{time}</p>
+        <div className="bg-[#161618] border border-[#2A2A2A] rounded-2xl p-4 sm:p-5 flex flex-col justify-center items-start w-full overflow-hidden">
+          <p className="text-[#8A8F98] text-xs sm:text-sm uppercase tracking-wider mb-1.5">Сегодня</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[#F7F8F8] tracking-tight leading-tight break-words hyphens-auto w-full">{today}</h2>
+          <div className="w-full mt-4 sm:mt-5">
+            <FlipClock />
+          </div>
         </div>
 
         {/* Task Progress Card */}
@@ -112,33 +144,63 @@ export function Dashboard({ tasks }: Props) {
 
         {/* Lo-Fi Player Card */}
         <div className="bg-[#161618] border border-[#2A2A2A] rounded-2xl p-6 flex flex-col justify-between md:col-span-1 min-h-[220px]">
-          <p className="text-[#8A8F98] text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Headphones size={14} className="text-[#00BCC5]" />
-            Lo-Fi Фокус
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[#8A8F98] text-sm uppercase tracking-wider flex items-center gap-2">
+              <Headphones size={14} className="text-[#00BCC5]" />
+              Lo-Fi Фокус
+            </p>
+            <div className="flex bg-[#0E0E0F] rounded-lg p-1 border border-[#2A2A2A]">
+              <button 
+                onClick={() => setPlayerMode('radio')}
+                className={`text-[11px] px-2 py-1 rounded-md transition-colors ${playerMode === 'radio' ? 'bg-[#222] text-[#F7F8F8]' : 'text-[#8A8F98] hover:text-[#F7F8F8]'}`}
+              >
+                Радио
+              </button>
+              <button 
+                onClick={() => setPlayerMode('soundcloud')}
+                className={`text-[11px] px-2 py-1 rounded-md transition-colors ${playerMode === 'soundcloud' ? 'bg-[#222] text-[#F7F8F8]' : 'text-[#8A8F98] hover:text-[#F7F8F8]'}`}
+              >
+                SoundCloud
+              </button>
+            </div>
+          </div>
           
           <div className="flex-1 rounded-xl overflow-hidden bg-black flex flex-col relative group">
-            {/* Custom Audio Player for raw stream to bypass restrictions */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1c] to-black z-10 p-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-[#00BCC5]/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                 <Headphones size={24} className="text-[#00BCC5]" />
-              </div>
-              <h3 className="text-[#F7F8F8] font-medium text-sm mb-1">Chill Lofi Radio</h3>
-              <p className="text-[#8A8F98] text-xs mb-4">24/7 Бесперебойный эфир</p>
-              
-              <audio 
-                controls 
-                className="w-full max-w-[200px] h-8 outline-none grayscale opacity-80 hover:opacity-100 transition-opacity" 
-                preload="none"
-              >
-                {/* Российские серверы вещания (работают без VPN) */}
-                <source src="https://radiorecord.hostingradio.ru/lofi96.aacp" type="audio/aac" />
-                <source src="https://radiorecord.hostingradio.ru/chillout96.aacp" type="audio/aac" />
-                Ваш браузер не поддерживает аудио.
-              </audio>
-            </div>
-            {/* Visual background effect */}
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
+            {playerMode === 'radio' ? (
+              <>
+                {/* Custom Audio Player for raw stream to bypass restrictions */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1c] to-black z-10 p-4 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#00BCC5]/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                     <Headphones size={24} className="text-[#00BCC5]" />
+                  </div>
+                  <h3 className="text-[#F7F8F8] font-medium text-sm mb-1">Chill Lofi Radio</h3>
+                  <p className="text-[#8A8F98] text-xs mb-4">24/7 Бесперебойный эфир</p>
+                  
+                  <audio 
+                    controls 
+                    className="w-full max-w-[200px] h-8 outline-none grayscale opacity-80 hover:opacity-100 transition-opacity" 
+                    preload="none"
+                  >
+                    {/* Российские серверы вещания (работают без VPN) */}
+                    <source src="https://radiorecord.hostingradio.ru/lofi96.aacp" type="audio/aac" />
+                    <source src="https://radiorecord.hostingradio.ru/chillout96.aacp" type="audio/aac" />
+                    Ваш браузер не поддерживает аудио.
+                  </audio>
+                </div>
+                {/* Visual background effect */}
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
+              </>
+            ) : (
+              <iframe 
+                width="100%" 
+                height="100%" 
+                scrolling="no" 
+                frameBorder="no" 
+                allow="autoplay" 
+                src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/chillhopdotcom&color=%2300BCC5&auto_play=false&hide_related=false&show_comments=false&show_user=false&show_reposts=false&show_teaser=true&visual=true"
+                className="flex-1"
+              ></iframe>
+            )}
           </div>
         </div>
 
