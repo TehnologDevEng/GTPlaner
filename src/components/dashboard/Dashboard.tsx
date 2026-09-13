@@ -84,7 +84,7 @@ export function Dashboard({ tasks }: Props) {
         {/* Date / Time Card */}
         <div className="bg-[#161618] border border-[#2A2A2A] rounded-2xl p-4 sm:p-5 flex flex-col justify-center items-start w-full overflow-hidden">
           <p className="text-[#8A8F98] text-xs sm:text-sm uppercase tracking-wider mb-1.5">Сегодня</p>
-          <h2 className="text-xl sm:text-2xl font-bold text-[#F7F8F8] tracking-tight leading-tight break-words hyphens-auto w-full">{today}</h2>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#F7F8F8] tracking-tight leading-tight break-words hyphens-auto w-full">{today}</h2>
           <div className="w-full mt-4 sm:mt-5">
             <FlipClock />
           </div>
