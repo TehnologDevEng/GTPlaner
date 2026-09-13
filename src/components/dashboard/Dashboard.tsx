@@ -116,16 +116,28 @@ export function Dashboard({ tasks }: Props) {
             <Headphones size={14} className="text-[#00BCC5]" />
             Lo-Fi Фокус
           </p>
-          <div className="flex-1 rounded-xl overflow-hidden bg-black flex flex-col">
-            <iframe 
-              width="100%" 
-              height="100%" 
-              scrolling="no" 
-              frameBorder="no" 
-              allow="autoplay" 
-              src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/chillhopdotcom&color=%2300BCC5&auto_play=false&hide_related=false&show_comments=false&show_user=false&show_reposts=false&show_teaser=true&visual=true"
-              className="flex-1"
-            ></iframe>
+          
+          <div className="flex-1 rounded-xl overflow-hidden bg-black flex flex-col relative group">
+            {/* Custom Audio Player for raw stream to bypass restrictions */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#1a1a1c] to-black z-10 p-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-[#00BCC5]/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                 <Headphones size={24} className="text-[#00BCC5]" />
+              </div>
+              <h3 className="text-[#F7F8F8] font-medium text-sm mb-1">Chill Lofi Radio</h3>
+              <p className="text-[#8A8F98] text-xs mb-4">24/7 Бесперебойный эфир</p>
+              
+              <audio 
+                controls 
+                className="w-full max-w-[200px] h-8 outline-none grayscale opacity-80 hover:opacity-100 transition-opacity" 
+                preload="none"
+              >
+                {/* Free reliable lofi stream */}
+                <source src="https://play.streamafrica.net/lofi" type="audio/mpeg" />
+                Ваш браузер не поддерживает аудио.
+              </audio>
+            </div>
+            {/* Visual background effect */}
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
           </div>
         </div>
 
