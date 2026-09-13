@@ -108,7 +108,7 @@ export default function App() {
         <DragOverlay dropAnimation={{
           sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
         }}>
-          {activeId ? (
+          {activeId && tasks.find(t => t.id === activeId) ? (
             <SortableTask 
               task={tasks.find(t => t.id === activeId)!} 
               onToggle={toggleTask} 
