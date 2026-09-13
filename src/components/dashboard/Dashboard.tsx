@@ -131,10 +131,9 @@ export function Dashboard({ tasks }: Props) {
                 className="w-full max-w-[200px] h-8 outline-none grayscale opacity-80 hover:opacity-100 transition-opacity" 
                 preload="none"
               >
-                {/* Free reliable lofi streams with fallbacks */}
-                <source src="https://stream.zeno.fm/f3wvbbqmdg8uv" type="audio/mpeg" />
-                <source src="https://lofi.stream.laut.fm/lofi" type="audio/mpeg" />
-                <source src="https://stream.nightride.fm/chillsynth.m4a" type="audio/mp4" />
+                {/* Российские серверы вещания (работают без VPN) */}
+                <source src="https://radiorecord.hostingradio.ru/lofi96.aacp" type="audio/aac" />
+                <source src="https://radiorecord.hostingradio.ru/chillout96.aacp" type="audio/aac" />
                 Ваш браузер не поддерживает аудио.
               </audio>
             </div>
