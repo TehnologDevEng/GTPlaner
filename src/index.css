@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --color-background: #000000;
+  --color-surface: #0E0E0F;
+  --color-surface-hover: #1A1A1C;
+  --color-border: #222222;
+  --color-text-primary: #F7F8F8;
+  --color-text-secondary: #8A8F98;
+  --color-accent: #5E6AD2;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  /* iPad Pro specific: prevent bounce scroll on the body */
+  overscroll-behavior-y: none;
+}
+
+/* Hide scrollbars for a cleaner look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

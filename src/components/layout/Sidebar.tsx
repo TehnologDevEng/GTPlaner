@@ -1,0 +1,86 @@
+import { cn } from '@/lib/utils';
+import { Calendar, CloudSun, Command, Inbox, Settings, ListTodo, LayoutDashboard, Archive } from 'lucide-react';
+
+interface SidebarProps {
+  currentView: 'board' | 'dashboard' | 'archive';
+  setView: (view: 'board' | 'dashboard' | 'archive') => void;
+  onToggleInbox: () => void;
+}
+
+export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
+  return (
+    <aside className="w-64 h-full bg-[#0E0E0F] border-r border-[#222222] flex flex-col pt-8 pb-4 shrink-0">
+      <div className="px-5 mb-8 flex items-center gap-3 text-[#F7F8F8]">
+        <div className="w-8 h-8 rounded-md bg-[#00BCC5] flex items-center justify-center shadow-lg shadow-[#00BCC5]/20">
+          <ListTodo size={18} className="text-white" />
+        </div>
+        <span className="font-semibold text-lg tracking-tight">MYPLANER</span>
+      </div>
+
+      <div className="px-3 mb-6 space-y-0.5">
+        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors">
+          <Command size={16} />
+          <span>Командное меню</span>
+          <kbd className="ml-auto text-[10px] font-medium border border-[#333] px-1.5 py-0.5 rounded text-[#8A8F98]">⌘K</kbd>
+        </button>
+        <button 
+          onClick={onToggleInbox}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors"
+        >
+          <Inbox size={16} />
+          <span>Инбокс</span>
+        </button>
+      </div>
+
+      <div className="px-5 mb-2">
+        <h3 className="text-xs font-semibold text-[#8A8F98] tracking-wider uppercase">Планер 2026</h3>
+      </div>
+      
+      <div className="px-3 flex-1 overflow-y-auto space-y-0.5">
+        <button
+          onClick={() => setView('dashboard')}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            currentView === 'dashboard'
+              ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
+              : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
+          )}
+        >
+          <LayoutDashboard size={16} className={currentView === 'dashboard' ? "text-[#00BCC5]" : "text-transparent"} />
+          <span>Дашборд</span>
+        </button>
+        <button
+          onClick={() => setView('board')}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            currentView === 'board'
+              ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
+              : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
+          )}
+        >
+          <Calendar size={16} className={currentView === 'board' ? "text-[#00BCC5]" : "text-transparent"} />
+          <span>Сегодня</span>
+        </button>
+        <button
+          onClick={() => setView('archive')}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            currentView === 'archive'
+              ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
+              : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
+          )}
+        >
+          <Archive size={16} className={currentView === 'archive' ? "text-[#00BCC5]" : "text-transparent"} />
+          <span>Архив</span>
+        </button>
+      </div>
+
+      <div className="px-3 mt-auto space-y-0.5 pt-4">
+        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors">
+          <Settings size={16} />
+          <span>Настройки</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
