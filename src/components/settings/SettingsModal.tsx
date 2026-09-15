@@ -193,13 +193,15 @@ export const SettingsModal: React.FC<Props> = ({
                       Браузеры блокируют окна авторизации Google внутри фреймов. Для быстрого и безошибочного входа откройте планер в отдельной вкладке:
                     </p>
                   </div>
-                  <button
-                    onClick={handleOpenInNewTab}
-                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium shadow-sm transition-all"
+                  <a
+                    href={typeof window !== 'undefined' ? window.location.href : '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium shadow-sm transition-all cursor-pointer no-underline"
                   >
                     <ExternalLink size={13} />
                     <span>Открыть во вкладке</span>
-                  </button>
+                  </a>
                 </div>
               )}
 
@@ -370,14 +372,15 @@ export const SettingsModal: React.FC<Props> = ({
                       </div>
                     ) : (
                       <div className="pt-2 border-t border-red-900/40 flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleOpenInNewTab}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
+                        <a
+                          href={typeof window !== 'undefined' ? window.location.href : '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium transition-colors shadow-sm cursor-pointer no-underline"
                         >
                           <ExternalLink size={13} />
                           <span>Открыть в новой вкладке</span>
-                        </button>
+                        </a>
 
                         <button
                           type="button"

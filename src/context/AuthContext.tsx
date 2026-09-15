@@ -45,7 +45,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const u = await loginWithGoogle();
       return u;
-    } catch (err) {
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      const isStandalone = typeof window !== 'undefined' && (
+        window.matchMedia?.('(display-mode: standalone)').matches ||
+        (window.navigator as unknown as { standalone?: boolean })?.standalone === true
+      );
+
+      // If popup was blocked or running in iOS standalone PWA, auto fallback to redirect
+      if (e?.code === 'auth/popup-blocked' || isStandalone) {
+        console.warn('Popup blocked or PWA standalone mode detected. Redirecting to Google Sign-In...');
+        await loginWithGoogleRedirect();
+        return null;
+      }
+
       console.error('Failed to sign in (Popup):', err);
       throw err;
     }

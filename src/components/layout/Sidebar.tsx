@@ -21,7 +21,7 @@ export function Sidebar({
   onOpenSettings, 
   syncStatus 
 }: SidebarProps) {
-  const { isInstallable, isStandalone, isIOS, triggerInstall } = usePWAInstall();
+  const { isInstallable, hasDeferredPrompt, isStandalone, isIOS, triggerInstall } = usePWAInstall();
   const [showInstallModal, setShowInstallModal] = useState(false);
 
   const handleInstallClick = async () => {
@@ -146,6 +146,7 @@ export function Sidebar({
         isOpen={showInstallModal}
         onClose={() => setShowInstallModal(false)}
         isIOS={isIOS}
+        hasDeferredPrompt={hasDeferredPrompt}
         onPromptInstall={triggerInstall}
       />
     </>

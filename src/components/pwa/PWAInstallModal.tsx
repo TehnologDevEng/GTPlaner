@@ -22,9 +22,10 @@ export const usePWAInstall = () => {
 
     checkStandalone();
 
-    // Check if iOS
+    // Check if iOS or iPadOS (modern iPadOS reports as MacIntel with touch points)
     const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
+    const isTouchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent) || isTouchMac;
     setIsIOS(isIOSDevice);
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -58,6 +59,7 @@ export const usePWAInstall = () => {
 
   return {
     isInstallable: Boolean(deferredPrompt) || isIOS,
+    hasDeferredPrompt: Boolean(deferredPrompt),
     isStandalone,
     isIOS,
     triggerInstall,
@@ -68,6 +70,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   isIOS: boolean;
+  hasDeferredPrompt?: boolean;
   onPromptInstall?: () => void;
 }
 
@@ -75,6 +78,7 @@ export const PWAInstallModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   isIOS,
+  hasDeferredPrompt,
   onPromptInstall,
 }) => {
   if (!isOpen) return null;
@@ -139,18 +143,27 @@ export const PWAInstallModal: React.FC<ModalProps> = ({
             <p className="text-xs text-[#D1D5DB] leading-relaxed">
               Установите MYPLANER на ваш компьютер или телефон, чтобы открывать его в отдельном быстром окне без браузерных вкладок.
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  onPromptInstall?.();
-                  onClose();
-                }}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-xl text-xs font-semibold shadow-md shadow-[#00BCC5]/20 transition-all"
-              >
-                <Download size={14} />
-                <span>Установить сейчас</span>
-              </button>
-            </div>
+            {hasDeferredPrompt ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    onPromptInstall?.();
+                    onClose();
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-xl text-xs font-semibold shadow-md shadow-[#00BCC5]/20 transition-all cursor-pointer"
+                >
+                  <Download size={14} />
+                  <span>Установить сейчас</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 bg-[#1C1C20] border border-[#2A2A30] rounded-xl text-xs space-y-2 text-[#D1D5DB]">
+                <p className="font-medium text-[#F7F8F8]">В вашем браузере:</p>
+                <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                  Нажмите на значок установки <strong className="text-[#F7F8F8]">«Установить приложение»</strong> в правой части адресной строки браузера (в Chrome / Edge) или откройте меню браузера (три точки ⋯) → <strong>«Установить MYPLANER»</strong>.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
