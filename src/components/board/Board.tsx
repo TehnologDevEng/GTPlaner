@@ -3,7 +3,6 @@ import { Column, Task } from '@/types';
 import { BoardColumn } from './BoardColumn';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Cloud, CloudCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const defaultCols: Column[] = [
@@ -25,13 +24,6 @@ export function Board({ tasks, onToggleTask, onAddTask }: Props) {
   const today = format(new Date(), 'EEEE, d MMMM', { locale: ru });
   const formattedToday = today.charAt(0).toUpperCase() + today.slice(1);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scrollBoard = (direction: 'left' | 'right') => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = direction === 'left' ? -320 : 320;
-      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
 
   const scrollToColumn = (colId: string) => {
     const el = document.getElementById(`column-${colId}`);
@@ -55,35 +47,17 @@ export function Board({ tasks, onToggleTask, onAddTask }: Props) {
           )}
         </div>
 
-        {/* Quick jump tabs & scroll arrows for iPad / tablet */}
-        <div className="flex items-center gap-2">
-          <div className="hidden lg:flex items-center gap-1.5 mr-2">
-            {defaultCols.map(c => (
-              <button
-                key={c.id}
-                onClick={() => scrollToColumn(c.id)}
-                className="text-[11px] px-2.5 py-1 rounded-md bg-[#161618] hover:bg-[#222] text-[#8A8F98] hover:text-[#F7F8F8] transition-colors border border-[#262628]"
-              >
-                {c.title}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 bg-[#141416] p-1 rounded-lg border border-[#262628]">
+        {/* Quick jump tabs for iPad / tablet */}
+        <div className="hidden lg:flex items-center gap-1.5">
+          {defaultCols.map(c => (
             <button
-              onClick={() => scrollBoard('left')}
-              className="p-1.5 rounded text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#202024] transition-colors"
-              title="Прокрутить влево"
+              key={c.id}
+              onClick={() => scrollToColumn(c.id)}
+              className="text-[11px] px-2.5 py-1 rounded-md bg-[#161618] hover:bg-[#222] text-[#8A8F98] hover:text-[#F7F8F8] transition-colors border border-[#262628]"
             >
-              <ChevronLeft size={16} />
+              {c.title}
             </button>
-            <button
-              onClick={() => scrollBoard('right')}
-              className="p-1.5 rounded text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#202024] transition-colors"
-              title="Прокрутить вправо"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          ))}
         </div>
       </header>
       

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Cloud, Loader2, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Cloud, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   syncStatus: 'idle' | 'syncing' | 'synced' | 'offline';
@@ -121,7 +121,6 @@ export const UserProfile: React.FC<Props> = ({ syncStatus, onOpenSettings }) => 
             </p>
           </div>
         </div>
-        <ChevronRight size={14} className="text-[#666] group-hover:text-[#00BCC5] group-hover:translate-x-0.5 transition-all shrink-0" />
       </button>
     </div>
   );
