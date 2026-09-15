@@ -289,16 +289,18 @@ export const SettingsModal: React.FC<Props> = ({
 
                 {/* Detailed Error Diagnostic Card */}
                 {authError && (
-                  <div className="p-3.5 bg-red-950/30 border border-red-800/40 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                  <div className="p-4 bg-red-950/20 border border-red-800/40 rounded-xl space-y-3 animate-in fade-in duration-150">
                     <div className="flex items-start gap-2.5">
-                      <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                      <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
                       <div className="space-y-1 flex-1">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-semibold text-red-300">
-                            {authError.title}
+                          <h4 className="text-xs font-semibold text-amber-300">
+                            {authError.code === 'auth/unauthorized-domain' 
+                              ? 'Требуется добавить домен в Firebase Console' 
+                              : authError.title}
                           </h4>
                           {authError.code && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-red-900/50 text-red-300 rounded">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-red-900/40 text-red-300 rounded border border-red-800/30">
                               {authError.code}
                             </span>
                           )}
@@ -309,33 +311,84 @@ export const SettingsModal: React.FC<Props> = ({
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-red-900/40 flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={handleOpenInNewTab}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
-                      >
-                        <ExternalLink size={13} />
-                        <span>Открыть в новой вкладке</span>
-                      </button>
+                    {/* Specific step-by-step interactive guide for auth/unauthorized-domain */}
+                    {authError.code === 'auth/unauthorized-domain' ? (
+                      <div className="pt-2.5 border-t border-red-900/40 space-y-3">
+                        <div className="p-3 bg-[#18181B] border border-[#2A2A2E] rounded-lg space-y-2 text-xs">
+                          <p className="text-[#D1D5DB] font-medium flex items-center gap-1.5">
+                            <span>Как включить вход для GitHub Pages (3 простых шага):</span>
+                          </p>
+                          <ol className="list-decimal list-inside space-y-1.5 text-[#A1A1AA] text-[11px] leading-relaxed">
+                            <li>
+                              Скопируйте ваш домен:
+                              <div className="mt-1 flex items-center gap-2">
+                                <span className="font-mono bg-[#222226] text-[#00BCC5] px-2 py-1 rounded border border-[#333]">
+                                  {window.location.hostname}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleCopyDomain}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-[#28282E] hover:bg-[#323238] text-[#F7F8F8] rounded border border-[#3E3E44] text-[11px] transition-colors"
+                                >
+                                  {copiedDomain ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                                  <span>{copiedDomain ? 'Скопировано!' : 'Скопировать'}</span>
+                                </button>
+                              </div>
+                            </li>
+                            <li className="pt-1">
+                              Перейдите в консоль проекта Firebase в раздел настроек авторизации:
+                              <div className="mt-1">
+                                <a
+                                  href={`https://console.firebase.google.com/project/gen-lang-client-0295430383/authentication/settings`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-md font-medium text-xs shadow-sm transition-colors"
+                                >
+                                  <ExternalLink size={13} />
+                                  <span>Открыть Firebase Console (Authorized domains)</span>
+                                </a>
+                              </div>
+                            </li>
+                            <li className="pt-1">
+                              В блоке <strong className="text-[#F7F8F8]">Authorized domains</strong> (Доверенные домены) нажмите <strong className="text-[#F7F8F8]">Add domain</strong>, вставьте скопированный домен <span className="font-mono text-[#00BCC5]">{window.location.hostname}</span> и нажмите <strong className="text-[#F7F8F8]">Done</strong>.
+                            </li>
+                          </ol>
+                        </div>
 
-                      <button
-                        onClick={handleSignInRedirectMode}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#26262A] hover:bg-[#323238] text-[#F7F8F8] border border-[#3E3E44] rounded-lg text-xs font-medium transition-colors"
-                      >
-                        <ArrowRight size={13} />
-                        <span>Попробовать Redirect</span>
-                      </button>
-
-                      {authError.code === 'auth/unauthorized-domain' && (
+                        <div className="flex items-center justify-between pt-1 text-[11px] text-[#8A8F98]">
+                          <span>После сохранения в Firebase нажмите кнопку входа повторно:</span>
+                          <button
+                            type="button"
+                            onClick={handleSignInPopup}
+                            disabled={isSigningIn}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-[#222226] hover:bg-[#2C2C32] text-[#F7F8F8] border border-[#3A3A40] rounded-md transition-colors"
+                          >
+                            <RefreshCw size={11} className={isSigningIn ? 'animate-spin text-[#00BCC5]' : ''} />
+                            <span>Повторить вход</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="pt-2 border-t border-red-900/40 flex flex-wrap items-center gap-2">
                         <button
-                          onClick={handleCopyDomain}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F1F23] hover:bg-[#2A2A30] text-[#00BCC5] border border-[#00BCC5]/30 rounded-lg text-xs transition-colors"
+                          type="button"
+                          onClick={handleOpenInNewTab}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
                         >
-                          {copiedDomain ? <Check size={13} /> : <Copy size={13} />}
-                          <span>Скопировать домен ({window.location.hostname})</span>
+                          <ExternalLink size={13} />
+                          <span>Открыть в новой вкладке</span>
                         </button>
-                      )}
-                    </div>
+
+                        <button
+                          type="button"
+                          onClick={handleSignInRedirectMode}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#26262A] hover:bg-[#323238] text-[#F7F8F8] border border-[#3E3E44] rounded-lg text-xs font-medium transition-colors"
+                        >
+                          <ArrowRight size={13} />
+                          <span>Попробовать Redirect</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

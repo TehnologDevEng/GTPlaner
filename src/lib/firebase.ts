@@ -42,20 +42,32 @@ export const isInsideIframe = (): boolean => {
   }
 };
 
-export const getAuthErrorMessage = (error: unknown): { title: string; message: string; code?: string; isIframe?: boolean } => {
+export const getFirebaseConsoleUrl = (): string => {
+  return `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
+};
+
+export const getAuthErrorMessage = (error: unknown): { 
+  title: string; 
+  message: string; 
+  code?: string; 
+  isIframe?: boolean;
+  domain?: string;
+  consoleUrl?: string;
+} => {
   const isIframe = isInsideIframe();
   const err = error as { code?: string; message?: string };
   const code = err?.code || '';
   const rawMessage = err?.message || String(error);
+  const domain = typeof window !== 'undefined' ? window.location.hostname : '';
 
-  console.warn('Firebase Auth Diagnostic:', { code, rawMessage, isIframe, hostname: window.location.hostname });
+  console.warn('Firebase Auth Diagnostic:', { code, rawMessage, isIframe, hostname: domain });
 
   if (code === 'auth/popup-blocked') {
     return {
       title: 'Всплывающее окно заблокировано',
       message: isIframe
         ? 'Окно предпросмотра (iframe) блокирует всплывающие окна авторизации Google. Откройте приложение в отдельной вкладке — там вход работает без ограничений.'
-        : 'Ваш браузер заблокировал всплывающее окно Google. Разрешите всплывающие окна или воспользуйтесь режимом прямого перехода (Redirect).',
+        : 'Ваш браузер заблокировал всплывающее окно Google. Разрешите всплывающие окна в настройках браузера или воспользуйтесь режимом прямого перехода (Redirect).',
       code,
       isIframe,
     };
@@ -70,11 +82,12 @@ export const getAuthErrorMessage = (error: unknown): { title: string; message: s
   }
 
   if (code === 'auth/unauthorized-domain') {
-    const domain = window.location.hostname;
     return {
       title: 'Домен не авторизован в Firebase',
-      message: `Домен "${domain}" не добавлен в список доверенных доменов Firebase Auth. Откройте приложение по основному адресу или добавьте ${domain} в Firebase Console → Authentication → Settings → Authorized domains.`,
+      message: `Домен "${domain}" не добавлен в список доверенных доменов Firebase Auth. Чтобы авторизация Google заработала на ${domain}, добавьте его в список Authorized domains в консоли Firebase.`,
       code,
+      domain,
+      consoleUrl: getFirebaseConsoleUrl(),
     };
   }
 
