@@ -1,28 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bgFull" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#141416" />
-      <stop offset="100%" stop-color="#09090B" />
-    </linearGradient>
-    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00E5FF" />
-      <stop offset="100%" stop-color="#00BCC5" />
+    <linearGradient id="cyanBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#05C9D3" />
+      <stop offset="100%" stop-color="#00A8B1" />
     </linearGradient>
   </defs>
-  <!-- Full-bleed 100% solid square background (no transparent edges) -->
-  <rect width="512" height="512" fill="url(#bgFull)" />
-  
-  <!-- Subtle inner sleek plate -->
-  <rect x="40" y="40" width="432" height="432" rx="96" fill="#1C1C20" stroke="#2C2C32" stroke-width="6" />
-  
-  <!-- Minimalist Geometric Task / Plan Icon -->
-  <path 
-    d="M165 265 L225 325 L355 185" 
-    fill="none" 
-    stroke="url(#cyanGrad)" 
-    stroke-width="38" 
-    stroke-linecap="round" 
-    stroke-linejoin="round" 
-  />
-  <circle cx="355" cy="185" r="14" fill="#00E5FF" />
+  <!-- Full bleed 100% solid square background - ZERO transparency, perfect for Apple squircle mask -->
+  <rect width="512" height="512" fill="url(#cyanBg)" />
+
+  <!-- Centered ListTodo symbol matching MYPLANER brand -->
+  <g transform="translate(116, 116) scale(11.666)" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="3" y="5" width="6" height="6" rx="1.2" />
+    <path d="m3 17 2 2 4-4" />
+    <path d="M13 6h8" />
+    <path d="M13 12h8" />
+    <path d="M13 18h8" />
+  </g>
 </svg>
