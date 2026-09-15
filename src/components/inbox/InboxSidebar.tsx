@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Task } from '@/types';
 import { X, Plus, Inbox } from 'lucide-react';
 import { SortableTask } from '../board/SortableTask';
@@ -14,7 +14,7 @@ interface Props {
   isDragging?: boolean;
 }
 
-export function InboxSidebar({ isOpen, onClose, tasks, onToggleTask, onAddTask, isDragging }: Props) {
+export const InboxSidebar: React.FC<Props> = ({ isOpen, onClose, tasks, onToggleTask, onAddTask, isDragging }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
 

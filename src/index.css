@@ -15,7 +15,15 @@ body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
   /* iPad Pro specific: prevent bounce scroll on the body */
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.draggable-card {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 /* Hide scrollbars for a cleaner look */

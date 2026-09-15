@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Column, Task } from '@/types';
 import { Plus } from 'lucide-react';
 import { SortableTask } from './SortableTask';
@@ -12,7 +12,7 @@ interface Props {
   onAddTask: (columnId: string, content: string) => void;
 }
 
-export function BoardColumn({ column, tasks, onToggleTask, onAddTask }: Props) {
+export const BoardColumn: React.FC<Props> = ({ column, tasks, onToggleTask, onAddTask }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
   

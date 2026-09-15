@@ -5,7 +5,20 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { Archive } from './components/archive/Archive';
 import { InboxSidebar } from './components/inbox/InboxSidebar';
 import { useTasks } from './hooks/useTasks';
-import { DndContext, DragOverEvent, DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners, KeyboardSensor, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
+import { 
+  DndContext, 
+  DragOverEvent, 
+  DragStartEvent, 
+  DragEndEvent, 
+  MouseSensor, 
+  TouchSensor, 
+  KeyboardSensor, 
+  useSensor, 
+  useSensors, 
+  closestCorners, 
+  DragOverlay, 
+  defaultDropAnimationSideEffects 
+} from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { SortableTask } from './components/board/SortableTask';
 
@@ -16,7 +29,15 @@ export default function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120, // 120ms intentional touch-and-hold to start drag on iPad
+        tolerance: 7, // allows natural micro-movement without cancelling
+      },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -58,32 +79,61 @@ export default function App() {
         
         if (prevTasks[activeIndex].columnId !== prevTasks[overIndex].columnId) {
           const newTasks = [...prevTasks];
-          newTasks[activeIndex].columnId = prevTasks[overIndex].columnId;
+          newTasks[activeIndex] = { ...newTasks[activeIndex], columnId: prevTasks[overIndex].columnId };
           return arrayMove(newTasks, activeIndex, overIndex);
         }
-        return arrayMove(prevTasks, activeIndex, overIndex);
+        return prevTasks;
       });
     } else if (isOverColumn) {
       setTasks(prevTasks => {
         const activeIndex = prevTasks.findIndex(t => t.id === activeId);
         if (prevTasks[activeIndex].columnId !== overId) {
           const newTasks = [...prevTasks];
-          newTasks[activeIndex].columnId = overId as string;
-          return newTasks;
+          newTasks[activeIndex] = { ...newTasks[activeIndex], columnId: overId as string };
+          return arrayMove(newTasks, activeIndex, newTasks.length - 1);
         }
         return prevTasks;
       });
     }
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    if (activeId === overId) return;
+
+    const isActiveTask = active.data.current?.type === 'Task';
+    const isOverTask = over.data.current?.type === 'Task';
+
+    if (isActiveTask && isOverTask) {
+      setTasks(prevTasks => {
+        const activeIndex = prevTasks.findIndex(t => t.id === activeId);
+        const overIndex = prevTasks.findIndex(t => t.id === overId);
+        
+        if (prevTasks[activeIndex].columnId === prevTasks[overIndex].columnId) {
+          return arrayMove(prevTasks, activeIndex, overIndex);
+        }
+        return prevTasks;
+      });
+    }
   };
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
+      autoScroll={{
+        threshold: {
+          x: 0.2,
+          y: 0.2,
+        },
+        acceleration: 15,
+      }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
