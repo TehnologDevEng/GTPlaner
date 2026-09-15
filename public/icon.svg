@@ -1,15 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="cyanBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#05C9D3" />
-      <stop offset="100%" stop-color="#00A8B1" />
+    <linearGradient id="blackBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E0E11" />
+      <stop offset="100%" stop-color="#000000" />
+    </linearGradient>
+    <linearGradient id="cyanSymbol" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00DCE8" />
+      <stop offset="100%" stop-color="#00BCC5" />
     </linearGradient>
   </defs>
-  <!-- Full bleed 100% solid square background - ZERO transparency, perfect for Apple squircle mask -->
-  <rect width="512" height="512" fill="url(#cyanBg)" />
+  <!-- 100% solid deep black background (zero transparency for flawless iPadOS squircle masking) -->
+  <rect width="512" height="512" fill="url(#blackBg)" />
 
-  <!-- Centered ListTodo symbol matching MYPLANER brand -->
-  <g transform="translate(116, 116) scale(11.666)" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <!-- Centered ListTodo symbol in signature cyan/turquoise (#00BCC5) -->
+  <g transform="translate(116, 116) scale(11.666)" stroke="url(#cyanSymbol)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <rect x="3" y="5" width="6" height="6" rx="1.2" />
     <path d="m3 17 2 2 4-4" />
     <path d="M13 6h8" />
