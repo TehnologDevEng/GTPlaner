@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181B" />
+      <stop offset="100%" stop-color="#0E0E10" />
+    </linearGradient>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#00A5AD" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg)" stroke="#26262A" stroke-width="8" />
+  <!-- Minimalist Geometric Task / Plan Icon -->
+  <path 
+    d="M160 260 L220 320 L350 190" 
+    fill="none" 
+    stroke="url(#cyanGrad)" 
+    stroke-width="36" 
+    stroke-linecap="round" 
+    stroke-linejoin="round" 
+  />
+  <circle cx="350" cy="190" r="10" fill="#00E5FF" />
+</svg>
