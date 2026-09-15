@@ -1,13 +1,24 @@
 import { cn } from '@/lib/utils';
-import { Calendar, CloudSun, Command, Inbox, Settings, ListTodo, LayoutDashboard, Archive } from 'lucide-react';
+import { Calendar, Command, Inbox, Settings, ListTodo, LayoutDashboard, Archive } from 'lucide-react';
+import { UserProfile } from './UserProfile';
 
 interface SidebarProps {
   currentView: 'board' | 'dashboard' | 'archive';
   setView: (view: 'board' | 'dashboard' | 'archive') => void;
   onToggleInbox: () => void;
+  onOpenCommandMenu: () => void;
+  onOpenSettings: () => void;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'offline';
 }
 
-export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
+export function Sidebar({ 
+  currentView, 
+  setView, 
+  onToggleInbox, 
+  onOpenCommandMenu, 
+  onOpenSettings, 
+  syncStatus 
+}: SidebarProps) {
   return (
     <aside className="w-64 h-full bg-[#0E0E0F] border-r border-[#222222] flex flex-col pt-8 pb-4 shrink-0">
       <div className="px-5 mb-8 flex items-center gap-3 text-[#F7F8F8]">
@@ -18,17 +29,21 @@ export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
       </div>
 
       <div className="px-3 mb-6 space-y-0.5">
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors">
-          <Command size={16} />
+        <button 
+          onClick={onOpenCommandMenu}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors cursor-pointer group"
+        >
+          <Command size={16} className="group-hover:text-[#00BCC5] transition-colors" />
           <span>Командное меню</span>
           <kbd className="ml-auto text-[10px] font-medium border border-[#333] px-1.5 py-0.5 rounded text-[#8A8F98]">⌘K</kbd>
         </button>
         <button 
           onClick={onToggleInbox}
-          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors cursor-pointer group"
         >
-          <Inbox size={16} />
+          <Inbox size={16} className="group-hover:text-[#00BCC5] transition-colors" />
           <span>Инбокс</span>
+          <kbd className="ml-auto text-[10px] font-medium border border-[#333] px-1.5 py-0.5 rounded text-[#8A8F98]">I</kbd>
         </button>
       </div>
 
@@ -40,7 +55,7 @@ export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
         <button
           onClick={() => setView('dashboard')}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer",
             currentView === 'dashboard'
               ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
               : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
@@ -52,7 +67,7 @@ export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
         <button
           onClick={() => setView('board')}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer",
             currentView === 'board'
               ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
               : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
@@ -64,7 +79,7 @@ export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
         <button
           onClick={() => setView('archive')}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors",
+            "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer",
             currentView === 'archive'
               ? "bg-[#1A1A1C] text-[#F7F8F8] font-medium" 
               : "text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C]"
@@ -75,12 +90,17 @@ export function Sidebar({ currentView, setView, onToggleInbox }: SidebarProps) {
         </button>
       </div>
 
-      <div className="px-3 mt-auto space-y-0.5 pt-4">
-        <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors">
-          <Settings size={16} />
+      <div className="px-3 mt-auto space-y-2 pt-4 border-t border-[#1C1C1E]">
+        <UserProfile syncStatus={syncStatus} onOpenSettings={onOpenSettings} />
+        <button 
+          onClick={onOpenSettings}
+          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1A1A1C] rounded-lg transition-colors cursor-pointer group"
+        >
+          <Settings size={16} className="group-hover:text-[#00BCC5] transition-colors" />
           <span>Настройки</span>
         </button>
       </div>
     </aside>
   );
 }
+

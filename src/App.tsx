@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Board } from './components/board/Board';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { Archive } from './components/archive/Archive';
 import { InboxSidebar } from './components/inbox/InboxSidebar';
+import { CommandMenu } from './components/command/CommandMenu';
+import { SettingsModal } from './components/settings/SettingsModal';
 import { useTasks } from './hooks/useTasks';
 import { 
   DndContext, 
@@ -25,8 +27,22 @@ import { SortableTask } from './components/board/SortableTask';
 export default function App() {
   const [view, setView] = useState<'board' | 'dashboard' | 'archive'>('board');
   const [isInboxOpen, setIsInboxOpen] = useState(false);
-  const [tasks, setTasks] = useTasks();
+  const [isCommandMenuOpen, setIsCommandMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  const {
+    tasks,
+    setTasks,
+    syncStatus,
+    toggleTask,
+    addTask,
+    restoreTask,
+    deleteTaskPermanently,
+    archiveCompletedTasks,
+    clearArchive,
+    forceSyncNow,
+  } = useTasks();
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -41,17 +57,27 @@ export default function App() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, checked: !t.checked } : t));
-  };
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input or textarea
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable) {
+        return;
+      }
 
-  const addTask = (columnId: string, content: string) => {
-    setTasks([...tasks, { id: Date.now().toString(), columnId, content, checked: false }]);
-  };
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandMenuOpen(prev => !prev);
+      } else if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        setIsInboxOpen(prev => !prev);
+      }
+    };
 
-  const restoreTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, columnId: 'tasks', checked: false } : t));
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -138,12 +164,30 @@ export default function App() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex h-screen w-screen bg-[#000000] text-[#F7F8F8] overflow-hidden selection:bg-[#00BCC5]/30 relative">
-        <Sidebar currentView={view} setView={setView} onToggleInbox={() => setIsInboxOpen(true)} />
+      <div className="flex h-screen w-screen bg-[#000000] text-[#F7F8F8] overflow-hidden selection:bg-[#00BCC5]/30 relative font-sans">
+        <Sidebar 
+          currentView={view} 
+          setView={setView} 
+          onToggleInbox={() => setIsInboxOpen(prev => !prev)} 
+          onOpenCommandMenu={() => setIsCommandMenuOpen(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          syncStatus={syncStatus} 
+        />
+
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {view === 'board' && <Board tasks={tasks} onToggleTask={toggleTask} onAddTask={addTask} />}
+          {view === 'board' && (
+            <Board tasks={tasks} onToggleTask={toggleTask} onAddTask={addTask} />
+          )}
           {view === 'dashboard' && <Dashboard tasks={tasks} />}
-          {view === 'archive' && <Archive tasks={tasks} onRestore={restoreTask} />}
+          {view === 'archive' && (
+            <Archive 
+              tasks={tasks} 
+              onRestore={restoreTask} 
+              onDeletePermanently={deleteTaskPermanently}
+              onArchiveCompleted={archiveCompletedTasks}
+              onClearArchive={clearArchive}
+            />
+          )}
         </main>
 
         <InboxSidebar 
@@ -153,6 +197,31 @@ export default function App() {
           onToggleTask={toggleTask}
           onAddTask={addTask}
           isDragging={activeId !== null}
+        />
+
+        {/* Command Menu */}
+        <CommandMenu
+          isOpen={isCommandMenuOpen}
+          onClose={() => setIsCommandMenuOpen(false)}
+          onNavigate={(newView) => setView(newView)}
+          onToggleInbox={() => setIsInboxOpen(prev => !prev)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onAddTask={addTask}
+          onToggleTask={toggleTask}
+          onArchiveCompleted={archiveCompletedTasks}
+          onForceSync={forceSyncNow}
+          tasks={tasks}
+        />
+
+        {/* Settings Modal */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          syncStatus={syncStatus}
+          tasks={tasks}
+          onArchiveCompleted={archiveCompletedTasks}
+          onClearArchive={clearArchive}
+          onForceSync={forceSyncNow}
         />
 
         <DragOverlay dropAnimation={{

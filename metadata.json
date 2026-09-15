@@ -1,6 +1,6 @@
 {
   "name": "MYPLANER",
-  "description": "Imported MYPLANER from GitHub",
+  "description": "Минималистичный ежедневник и планер задач с облачной синхронизацией в реальном времени между устройствами",
   "requestFramePermissions": [
     "geolocation"
   ],
