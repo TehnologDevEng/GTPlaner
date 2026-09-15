@@ -3,20 +3,22 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   X, 
   Cloud, 
-  CloudCheck, 
   LogOut, 
   Loader2, 
   Archive, 
   Trash2, 
-  CheckCircle2, 
   Keyboard, 
   RefreshCw,
-  Sparkles,
   Smartphone,
   ShieldCheck,
-  CalendarCheck
+  ExternalLink,
+  AlertTriangle,
+  Copy,
+  Check,
+  ArrowRight
 } from 'lucide-react';
 import { Task } from '@/types';
+import { getAuthErrorMessage, isInsideIframe } from '../../lib/firebase';
 
 interface Props {
   isOpen: boolean;
@@ -37,12 +39,22 @@ export const SettingsModal: React.FC<Props> = ({
   onClearArchive,
   onForceSync,
 }) => {
-  const { user, loading, signIn, signOut } = useAuth();
+  const { user, signIn, signInRedirect, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'sync' | 'archive' | 'shortcuts'>('sync');
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningInRedirect, setIsSigningInRedirect] = useState(false);
+  const [authError, setAuthError] = useState<{
+    title: string;
+    message: string;
+    code?: string;
+    isIframe?: boolean;
+  } | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
   const [isSyncingManual, setIsSyncingManual] = useState(false);
   const [syncSuccessMessage, setSyncSuccessMessage] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const inIframe = isInsideIframe();
 
   if (!isOpen) return null;
 
@@ -63,21 +75,46 @@ export const SettingsModal: React.FC<Props> = ({
     }
   };
 
-  const handleSignIn = async () => {
+  const handleSignInPopup = async () => {
+    setAuthError(null);
+    setIsSigningIn(true);
     try {
-      setIsSigningIn(true);
       await signIn();
-    } catch (e) {
-      console.error(e);
+    } catch (e: unknown) {
+      const parsed = getAuthErrorMessage(e);
+      setAuthError(parsed);
     } finally {
       setIsSigningIn(false);
     }
   };
 
+  const handleSignInRedirectMode = async () => {
+    setAuthError(null);
+    setIsSigningInRedirect(true);
+    try {
+      await signInRedirect();
+    } catch (e: unknown) {
+      const parsed = getAuthErrorMessage(e);
+      setAuthError(parsed);
+    } finally {
+      setIsSigningInRedirect(false);
+    }
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(window.location.href, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyDomain = () => {
+    navigator.clipboard.writeText(window.location.hostname);
+    setCopiedDomain(true);
+    setTimeout(() => setCopiedDomain(false), 2000);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
       <div 
-        className="bg-[#121214] border border-[#262628] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        className="bg-[#121214] border border-[#262628] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -145,6 +182,27 @@ export const SettingsModal: React.FC<Props> = ({
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
           {activeTab === 'sync' && (
             <div className="space-y-4">
+              {/* Iframe advice banner if user not yet signed in */}
+              {!user && inIframe && (
+                <div className="p-3 bg-[#00BCC5]/10 border border-[#00BCC5]/20 rounded-xl flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-[#00BCC5]">
+                      Окно предпросмотра (iframe)
+                    </p>
+                    <p className="text-[11px] text-[#A1A1AA] leading-relaxed">
+                      Браузеры блокируют окна авторизации Google внутри фреймов. Для быстрого и безошибочного входа откройте планер в отдельной вкладке:
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenInNewTab}
+                    className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium shadow-sm transition-all"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Открыть во вкладке</span>
+                  </button>
+                </div>
+              )}
+
               {/* Account card */}
               <div className="p-4 bg-[#18181B] border border-[#2A2A2E] rounded-xl space-y-3">
                 <div className="flex items-start justify-between gap-4">
@@ -163,10 +221,10 @@ export const SettingsModal: React.FC<Props> = ({
                     )}
                     <div>
                       <h3 className="text-sm font-medium text-[#F7F8F8]">
-                        {user ? user.displayName || 'Google-пользователь' : 'Гостевой режим'}
+                        {user ? user.displayName || 'Google-пользователь' : 'Гостевой режим (офлайн)'}
                       </h3>
                       <p className="text-xs text-[#8A8F98]">
-                        {user ? user.email : 'Данные сохраняются только в этом браузере'}
+                        {user ? user.email : 'Войдите для синхронизации с iPad, телефоном и ПК'}
                       </p>
                     </div>
                   </div>
@@ -180,37 +238,106 @@ export const SettingsModal: React.FC<Props> = ({
                       <span>Выйти</span>
                     </button>
                   ) : (
-                    <button
-                      onClick={handleSignIn}
-                      disabled={isSigningIn}
-                      className="flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-white bg-[#00BCC5] hover:bg-[#00A5AD] active:scale-[0.98] rounded-lg transition-all shadow-md shadow-[#00BCC5]/20"
-                    >
-                      {isSigningIn ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                          <path
-                            fill="#FFFFFF"
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                          />
-                          <path
-                            fill="#FFFFFF"
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                          />
-                          <path
-                            fill="#FFFFFF"
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                          />
-                          <path
-                            fill="#FFFFFF"
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                          />
-                        </svg>
-                      )}
-                      <span>Войти через Google</span>
-                    </button>
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+                      <button
+                        onClick={handleSignInPopup}
+                        disabled={isSigningIn || isSigningInRedirect}
+                        className="flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-white bg-[#00BCC5] hover:bg-[#00A5AD] active:scale-[0.98] rounded-lg transition-all shadow-md shadow-[#00BCC5]/20 disabled:opacity-50"
+                      >
+                        {isSigningIn ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                            <path
+                              fill="#FFFFFF"
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                              fill="#FFFFFF"
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                              fill="#FFFFFF"
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                            />
+                            <path
+                              fill="#FFFFFF"
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                            />
+                          </svg>
+                        )}
+                        <span>Войти через Google</span>
+                      </button>
+
+                      {/* Fallback direct redirect button */}
+                      <button
+                        onClick={handleSignInRedirectMode}
+                        disabled={isSigningIn || isSigningInRedirect}
+                        title="Альтернативный способ входа без всплывающих окон (для Safari/iPad)"
+                        className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#222226] border border-[#2E2E32] rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isSigningInRedirect ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <ArrowRight size={13} />
+                        )}
+                        <span>Вход через Redirect</span>
+                      </button>
+                    </div>
                   )}
                 </div>
+
+                {/* Detailed Error Diagnostic Card */}
+                {authError && (
+                  <div className="p-3.5 bg-red-950/30 border border-red-800/40 rounded-xl space-y-2.5 animate-in fade-in duration-150">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-semibold text-red-300">
+                            {authError.title}
+                          </h4>
+                          {authError.code && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-red-900/50 text-red-300 rounded">
+                              {authError.code}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-red-200/90 leading-relaxed">
+                          {authError.message}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-red-900/40 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={handleOpenInNewTab}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00BCC5] hover:bg-[#00A5AD] text-white rounded-lg text-xs font-medium transition-colors shadow-sm"
+                      >
+                        <ExternalLink size={13} />
+                        <span>Открыть в новой вкладке</span>
+                      </button>
+
+                      <button
+                        onClick={handleSignInRedirectMode}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#26262A] hover:bg-[#323238] text-[#F7F8F8] border border-[#3E3E44] rounded-lg text-xs font-medium transition-colors"
+                      >
+                        <ArrowRight size={13} />
+                        <span>Попробовать Redirect</span>
+                      </button>
+
+                      {authError.code === 'auth/unauthorized-domain' && (
+                        <button
+                          onClick={handleCopyDomain}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F1F23] hover:bg-[#2A2A30] text-[#00BCC5] border border-[#00BCC5]/30 rounded-lg text-xs transition-colors"
+                        >
+                          {copiedDomain ? <Check size={13} /> : <Copy size={13} />}
+                          <span>Скопировать домен ({window.location.hostname})</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {user && (
                   <div className="pt-2 border-t border-[#262628] flex items-center justify-between text-xs">
@@ -258,7 +385,7 @@ export const SettingsModal: React.FC<Props> = ({
                       <span>iPad, Телефон и ПК</span>
                     </div>
                     <p className="text-[12px] text-[#8A8F98] leading-relaxed">
-                      Войдите под одним аккаунтом на iPad и телефоне — задачи обновляются мгновенно на обоих экранах без перезагрузки.
+                      Войдите под одним Google-аккаунтом на iPad и телефоне — задачи обновляются мгновенно на всех экранах без перезагрузки.
                     </p>
                   </div>
 
@@ -268,7 +395,7 @@ export const SettingsModal: React.FC<Props> = ({
                       <span>Безопасность</span>
                     </div>
                     <p className="text-[12px] text-[#8A8F98] leading-relaxed">
-                      Ваши задачи хранятся в защищенной облачной базе Google Firestore и доступны исключительно вам.
+                      Задачи хранятся в защищенной базе Google Firestore и изолированы по вашему персональному User ID.
                     </p>
                   </div>
                 </div>
@@ -374,7 +501,14 @@ export const SettingsModal: React.FC<Props> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3.5 bg-[#0E0E10] border-t border-[#222224] flex items-center justify-end">
+        <div className="px-6 py-3.5 bg-[#0E0E10] border-t border-[#222224] flex items-center justify-between">
+          <div className="text-[11px] text-[#8A8F98] flex items-center gap-1.5">
+            {inIframe && (
+              <span className="text-amber-400/80">
+                Совет: для лучшей работы на iPad откройте в Safari на весь экран
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-xs font-medium text-[#F7F8F8] bg-[#1E1E22] hover:bg-[#28282E] rounded-lg transition-colors border border-[#333]"
