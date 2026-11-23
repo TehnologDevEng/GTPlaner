@@ -133,7 +133,12 @@ export function Archive({
               <ArchiveIcon size={18} />
             </div>
             <div>
-              <h1 className="text-base font-semibold text-[#F7F8F8] tracking-tight">Архив задач</h1>
+              <div className="flex items-baseline gap-2.5">
+                <h1 className="text-base font-semibold text-[#F7F8F8] tracking-tight">Архив задач</h1>
+                <span className="font-signature text-[21px] leading-none text-[#00BCC5]/85 hidden sm:inline">
+                  история дней
+                </span>
+              </div>
               <p className="text-xs text-[#8A8F98] tabular-nums">
                 {archivedTasks.length > 0
                   ? `Сохранено в истории: ${archivedTasks.length}`

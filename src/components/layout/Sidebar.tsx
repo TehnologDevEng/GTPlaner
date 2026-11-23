@@ -68,9 +68,25 @@ export function Sidebar({
               <ListTodo size={18} className="text-white" />
             </div>
             {!isCollapsed && (
-              <span className="font-semibold text-lg tracking-tight whitespace-nowrap">
-                MYPLANER
-              </span>
+              <div className="flex flex-col leading-none select-none">
+                <span className="font-signature text-[28px] leading-[0.95] tracking-wide whitespace-nowrap">
+                  <span className="text-[#00BCC5]">MY</span>
+                  <span className="text-[#F7F8F8]">Planer</span>
+                </span>
+                <svg
+                  viewBox="0 0 112 8"
+                  className="w-[96px] h-[6px] -mt-0.5 text-[#00BCC5]/55"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 5.5C32 1.8 74 1.2 110 4.2"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
             )}
           </div>
           <button

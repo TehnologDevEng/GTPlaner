@@ -142,7 +142,12 @@ export const SettingsModal: React.FC<Props> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#222224] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-medium text-[#F7F8F8]">Настройки MYPLANER</h2>
+            <h2 className="text-base font-medium text-[#F7F8F8] flex items-baseline gap-2">
+              <span>Настройки</span>
+              <span className="font-signature text-[24px] leading-none tracking-wide">
+                <span className="text-[#00BCC5]">MY</span>Planer
+              </span>
+            </h2>
             {user && (
               <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

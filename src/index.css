@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: 'Inter', sans-serif;
+  --font-signature: 'Marck Script', cursive;
   --color-background: #000000;
   --color-surface: #0E0E0F;
   --color-surface-hover: #1A1A1C;

@@ -56,7 +56,7 @@ export function Board({
             {formattedToday}
           </h1>
           <span className="text-[#333333] hidden sm:inline">/</span>
-          <span className="text-[14px] text-[#8A8F98] hidden sm:inline whitespace-nowrap">
+          <span className="font-signature text-[22px] leading-none text-[#00BCC5]/90 hidden sm:inline whitespace-nowrap pt-0.5">
             Ежедневник
           </span>
           {user && (

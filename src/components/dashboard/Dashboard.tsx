@@ -112,8 +112,13 @@ export function Dashboard({ tasks, onToggleTask, onSelectTask }: Props) {
 
   return (
     <div className="flex flex-col h-full bg-[#000000] px-4 py-6 sm:p-8 overflow-y-auto">
-      <div className="flex items-center justify-between gap-3 mb-6 sm:mb-8 text-[#F7F8F8] max-w-4xl">
-        <h1 className="text-2xl font-semibold tracking-tight">{greeting}</h1>
+      <div className="flex items-baseline justify-between gap-3 mb-6 sm:mb-8 text-[#F7F8F8] max-w-4xl">
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <h1 className="font-signature text-4xl sm:text-[46px] leading-none text-[#F7F8F8] tracking-wide font-normal">
+            {greeting}
+          </h1>
+          <span className="text-xs text-[#666] hidden sm:inline">{today}</span>
+        </div>
         {completedSessions > 0 && (
           <span className="text-xs text-[#8A8F98] tabular-nums">
             Фокус-сессий сегодня: <strong className="text-[#00BCC5]">{completedSessions}</strong>
@@ -460,7 +465,9 @@ export function Dashboard({ tasks, onToggleTask, onSelectTask }: Props) {
           <blockquote className="text-lg sm:text-xl font-medium text-[#DEDEDE] leading-relaxed relative z-10">
             «{quote.text}»
           </blockquote>
-          <p className="text-xs text-[#8A8F98] mt-4 relative z-10">— {quote.author}</p>
+          <p className="font-signature text-[26px] leading-none text-[#00BCC5]/90 mt-4 relative z-10 text-right pr-1">
+            — {quote.author}
+          </p>
         </div>
       </div>
     </div>
