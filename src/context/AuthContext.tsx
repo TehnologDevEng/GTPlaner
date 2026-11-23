@@ -13,7 +13,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: () => Promise<User | null>;
-  signInRedirect: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -21,7 +20,6 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signIn: async () => null,
-  signInRedirect: async () => {},
   signOut: async () => {},
 });
 
@@ -64,15 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const handleSignInRedirect = async () => {
-    try {
-      await loginWithGoogleRedirect();
-    } catch (err) {
-      console.error('Failed to sign in (Redirect):', err);
-      throw err;
-    }
-  };
-
   const handleSignOut = async () => {
     try {
       await logout();
@@ -86,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, 
       loading, 
       signIn: handleSignIn, 
-      signInRedirect: handleSignInRedirect, 
       signOut: handleSignOut 
     }}>
       {children}
