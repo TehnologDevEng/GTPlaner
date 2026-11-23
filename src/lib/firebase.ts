@@ -1,38 +1,152 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signInWithCredential,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User 
+  User,
 } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  onSnapshot, 
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
+  getDocFromServer,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
   writeBatch,
-  serverTimestamp 
+  serverTimestamp,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { SyncDiagnosticsResult } from '@/types';
 
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'select_account',
 });
 
-export const db = firebaseConfig.firestoreDatabaseId 
+export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
+
+export const FIREBASE_META = {
+  projectId: firebaseConfig.projectId,
+  databaseId: firebaseConfig.firestoreDatabaseId || '(default)',
+};
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(
+  error: unknown,
+  operationType: OperationType,
+  path: string | null
+): FirestoreErrorInfo {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo:
+        auth.currentUser?.providerData?.map((provider) => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || [],
+    },
+    operationType,
+    path,
+  };
+  console.error('Firestore Error:', JSON.stringify(errInfo));
+  return errInfo;
+}
+
+// Startup Firestore connection check
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.error('Please check your Firebase configuration: the client is offline.');
+    }
+  }
+}
+if (typeof window !== 'undefined') {
+  testConnection();
+}
+
+// Live end-to-end sync diagnostic probe (writes, reads from server, and cleans up)
+export async function runSyncDiagnostic(userId: string): Promise<SyncDiagnosticsResult> {
+  const start = performance.now();
+  const probePath = `users/${userId}/settings/sync_probe`;
+  const probeRef = doc(db, 'users', userId, 'settings', 'sync_probe');
+  const marker = new Date().toISOString().slice(0, 19);
+
+  try {
+    await setDoc(probeRef, {
+      ownerId: userId,
+      lastRolloverDate: marker,
+      updatedAt: serverTimestamp(),
+    });
+    const serverSnap = await getDocFromServer(probeRef);
+    const verified = serverSnap.exists() && serverSnap.data()?.lastRolloverDate === marker;
+    await deleteDoc(probeRef).catch(() => {});
+
+    const latencyMs = Math.max(1, Math.round(performance.now() - start));
+    return {
+      ok: verified,
+      latencyMs,
+      databaseId: FIREBASE_META.databaseId,
+      projectId: FIREBASE_META.projectId,
+      checkedAt: new Date().toISOString(),
+      error: verified ? undefined : 'Сервер не вернул подтверждение записи.',
+    };
+  } catch (error) {
+    const info = handleFirestoreError(error, OperationType.WRITE, probePath);
+    const latencyMs = Math.max(1, Math.round(performance.now() - start));
+    return {
+      ok: false,
+      latencyMs,
+      databaseId: FIREBASE_META.databaseId,
+      projectId: FIREBASE_META.projectId,
+      checkedAt: new Date().toISOString(),
+      error: info.error,
+    };
+  }
+}
 
 export const isInsideIframe = (): boolean => {
   try {
@@ -46,10 +160,10 @@ export const getFirebaseConsoleUrl = (): string => {
   return `https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`;
 };
 
-export const getAuthErrorMessage = (error: unknown): { 
-  title: string; 
-  message: string; 
-  code?: string; 
+export const getAuthErrorMessage = (error: unknown): {
+  title: string;
+  message: string;
+  code?: string;
   isIframe?: boolean;
   domain?: string;
   consoleUrl?: string;
@@ -107,34 +221,23 @@ export const getAuthErrorMessage = (error: unknown): {
     };
   }
 
-  // Generic fallback with helpful guidance
   return {
     title: 'Не удалось войти через Google',
     message: isIframe
-      ? `В окне предпросмотра (iframe) браузер может блокировать сторонние cookie и окна авторизации. Откройте приложение в отдельной вкладке.`
-      : (rawMessage || 'Произошла ошибка при авторизации.'),
+      ? 'В окне предпросмотра (iframe) браузер может блокировать сторонние cookie и окна авторизации. Откройте приложение в отдельной вкладке.'
+      : rawMessage || 'Произошла ошибка при авторизации.',
     code: code || undefined,
     isIframe,
   };
 };
 
 export const loginWithGoogle = async (): Promise<User> => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (error: unknown) {
-    console.error('Google Sign-In Popup error:', error);
-    throw error;
-  }
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
 };
 
 export const loginWithGoogleRedirect = async (): Promise<void> => {
-  try {
-    await signInWithRedirect(auth, googleProvider);
-  } catch (error: unknown) {
-    console.error('Google Sign-In Redirect error:', error);
-    throw error;
-  }
+  await signInWithRedirect(auth, googleProvider);
 };
 
 export const checkRedirectResult = async (): Promise<User | null> => {
@@ -157,14 +260,16 @@ export const logout = async () => {
   return await firebaseSignOut(auth);
 };
 
-export { 
-  onAuthStateChanged, 
-  collection, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  writeBatch, 
-  serverTimestamp 
+export {
+  onAuthStateChanged,
+  collection,
+  doc,
+  getDoc,
+  getDocFromServer,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+  writeBatch,
+  serverTimestamp,
 };
 export type { User };

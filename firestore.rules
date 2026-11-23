@@ -1,15 +1,182 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default-deny global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened global primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isSignedIn()
+        && request.auth.uid == userId
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidColumnId(col) {
+      return col is string
+        && col.size() >= 1
+        && col.size() <= 32
+        && col in ['focus', 'tasks', 'calls', 'habits', 'personal', 'inbox', 'archive'];
+    }
+
+    function isOptionalString(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptionalPriority(data) {
+      return !('priority' in data)
+        || data.priority == null
+        || (data.priority is string && data.priority.size() <= 16 && data.priority in ['low', 'medium', 'high']);
+    }
+
+    function isOptionalSubtasks(data) {
+      return !('subtasks' in data)
+        || data.subtasks == null
+        || (
+          data.subtasks is list
+          && data.subtasks.size() <= 30
+          && (
+            data.subtasks.size() == 0
+            || (
+              data.subtasks[0] is map
+              && data.subtasks[0].keys().hasAll(['id', 'content', 'checked'])
+              && data.subtasks[0].keys().hasOnly(['id', 'content', 'checked'])
+              && data.subtasks[0].id is string && data.subtasks[0].id.size() <= 64
+              && data.subtasks[0].content is string && data.subtasks[0].content.size() <= 300
+              && data.subtasks[0].checked is bool
+            )
+          )
+        );
+    }
+
+    function isOptionalHabitHistory(data) {
+      return !('habitHistory' in data)
+        || data.habitHistory == null
+        || (
+          data.habitHistory is list
+          && data.habitHistory.size() <= 60
+          && (
+            data.habitHistory.size() == 0
+            || (data.habitHistory[0] is string && data.habitHistory[0].size() <= 20)
+          )
+        );
+    }
+
+    function isOptionalStreak(data) {
+      return !('streak' in data)
+        || data.streak == null
+        || (data.streak is number && data.streak >= 0 && data.streak <= 10000);
+    }
+
+    function isValidTask(data, userId, taskId) {
+      return data.keys().hasAll(['id', 'ownerId', 'columnId', 'content', 'checked', 'order', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'ownerId', 'columnId', 'originalColumnId', 'content', 'checked',
+          'order', 'notes', 'priority', 'subtasks', 'streak', 'lastCompletedDate',
+          'habitHistory', 'completedAt', 'archivedAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.id == taskId
+        && data.ownerId is string && data.ownerId.size() <= 128 && data.ownerId == userId
+        && isValidColumnId(data.columnId)
+        && (!('originalColumnId' in data) || data.originalColumnId == null || isValidColumnId(data.originalColumnId))
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 500
+        && data.checked is bool
+        && data.order is number
+        && isOptionalString(data, 'notes', 5000)
+        && isOptionalPriority(data)
+        && isOptionalSubtasks(data)
+        && isOptionalStreak(data)
+        && isOptionalString(data, 'lastCompletedDate', 20)
+        && isOptionalHabitHistory(data)
+        && isOptionalString(data, 'completedAt', 64)
+        && isOptionalString(data, 'archivedAt', 64)
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTitleMapEntry(titles, key) {
+      return !(key in titles) || (titles[key] is string && titles[key].size() >= 1 && titles[key].size() <= 60);
+    }
+
+    function isValidColumnTitles(data) {
+      return !('columnTitles' in data)
+        || data.columnTitles == null
+        || (
+          data.columnTitles is map
+          && data.columnTitles.keys().hasOnly(['focus', 'tasks', 'calls', 'habits', 'personal'])
+          && isValidTitleMapEntry(data.columnTitles, 'focus')
+          && isValidTitleMapEntry(data.columnTitles, 'tasks')
+          && isValidTitleMapEntry(data.columnTitles, 'calls')
+          && isValidTitleMapEntry(data.columnTitles, 'habits')
+          && isValidTitleMapEntry(data.columnTitles, 'personal')
+        );
+    }
+
+    function isValidPreferences(data, userId) {
+      return data.keys().hasAll(['ownerId', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'lastRolloverDate', 'columnTitles', 'updatedAt'])
+        && data.ownerId is string && data.ownerId.size() <= 128 && data.ownerId == userId
+        && isOptionalString(data, 'lastRolloverDate', 20)
+        && isValidColumnTitles(data)
+        && data.updatedAt == request.time;
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // User root document is locked; all user data lives in validated subcollections
+      allow read, write: if false;
 
       match /tasks/{taskId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow get: if isVerifiedOwner(userId) && isValidId(taskId);
+        allow list: if isVerifiedOwner(userId);
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(taskId)
+          && isValidTask(incoming(), userId, taskId);
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(taskId)
+          && isValidTask(incoming(), userId, taskId)
+          && (!('id' in existing()) || incoming().id == existing().id)
+          && (!('ownerId' in existing()) || incoming().ownerId == existing().ownerId)
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'ownerId', 'columnId', 'originalColumnId', 'content', 'checked',
+            'order', 'notes', 'priority', 'subtasks', 'streak', 'lastCompletedDate',
+            'habitHistory', 'completedAt', 'archivedAt', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(taskId);
       }
 
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /settings/{settingId} {
+        allow get: if isVerifiedOwner(userId) && isValidId(settingId) && settingId in ['preferences', 'sync_probe'];
+        allow list: if false;
+        allow create: if isVerifiedOwner(userId)
+          && isValidId(settingId)
+          && settingId in ['preferences', 'sync_probe']
+          && isValidPreferences(incoming(), userId);
+        allow update: if isVerifiedOwner(userId)
+          && isValidId(settingId)
+          && settingId in ['preferences', 'sync_probe']
+          && isValidPreferences(incoming(), userId)
+          && incoming().ownerId == existing().ownerId
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'lastRolloverDate', 'columnTitles', 'updatedAt'
+          ]);
+        allow delete: if isVerifiedOwner(userId) && isValidId(settingId) && settingId == 'sync_probe';
       }
     }
   }

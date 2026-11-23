@@ -15,15 +15,19 @@ import {
   AlertTriangle,
   Copy,
   Check,
-  ArrowRight
+  ArrowRight,
+  Activity
 } from 'lucide-react';
-import { Task } from '@/types';
-import { getAuthErrorMessage, isInsideIframe } from '../../lib/firebase';
+import { SyncDiagnosticsResult, Task } from '@/types';
+import { getAuthErrorMessage, isInsideIframe, runSyncDiagnostic } from '../../lib/firebase';
+import { format } from 'date-fns';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'offline';
+  lastSyncError?: string | null;
+  lastSyncedAt?: number | null;
   tasks: Task[];
   onArchiveCompleted: () => void;
   onClearArchive: (olderThanDays?: number) => void;
@@ -34,6 +38,8 @@ export const SettingsModal: React.FC<Props> = ({
   isOpen,
   onClose,
   syncStatus,
+  lastSyncError,
+  lastSyncedAt,
   tasks,
   onArchiveCompleted,
   onClearArchive,
@@ -52,14 +58,30 @@ export const SettingsModal: React.FC<Props> = ({
   const [copiedDomain, setCopiedDomain] = useState(false);
   const [isSyncingManual, setIsSyncingManual] = useState(false);
   const [syncSuccessMessage, setSyncSuccessMessage] = useState<string | null>(null);
+  const [isTestingSync, setIsTestingSync] = useState(false);
+  const [diagResult, setDiagResult] = useState<SyncDiagnosticsResult | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
   const inIframe = isInsideIframe();
 
   if (!isOpen) return null;
 
-  const completedOnBoardCount = tasks.filter(t => t.checked && t.columnId !== 'archive').length;
-  const inArchiveCount = tasks.filter(t => t.columnId === 'archive').length;
+  const completedOnBoardCount = tasks.filter(
+    (t) => t.checked && t.columnId !== 'archive' && t.columnId !== 'habits'
+  ).length;
+  const inArchiveCount = tasks.filter((t) => t.columnId === 'archive').length;
+
+  const handleRunDiagnostic = async () => {
+    if (!user) return;
+    setIsTestingSync(true);
+    setDiagResult(null);
+    try {
+      const res = await runSyncDiagnostic(user.uid);
+      setDiagResult(res);
+    } finally {
+      setIsTestingSync(false);
+    }
+  };
 
   const handleManualSync = async () => {
     setIsSyncingManual(true);
@@ -396,30 +418,76 @@ export const SettingsModal: React.FC<Props> = ({
                 )}
 
                 {user && (
-                  <div className="pt-2 border-t border-[#262628] flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#8A8F98]">Статус подключения:</span>
-                      {syncStatus === 'syncing' ? (
-                        <span className="text-[#00BCC5] flex items-center gap-1 font-medium">
-                          <Loader2 size={12} className="animate-spin" /> Синхронизируется...
-                        </span>
-                      ) : syncStatus === 'synced' ? (
-                        <span className="text-emerald-400 flex items-center gap-1 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> В сети (реальное время)
-                        </span>
-                      ) : (
-                        <span className="text-amber-400">Ожидание подключения</span>
-                      )}
+                  <div className="pt-3 border-t border-[#262628] space-y-3 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#8A8F98]">Статус:</span>
+                        {syncStatus === 'syncing' ? (
+                          <span className="text-[#00BCC5] flex items-center gap-1 font-medium">
+                            <Loader2 size={12} className="animate-spin" /> Синхронизируется...
+                          </span>
+                        ) : syncStatus === 'synced' ? (
+                          <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            <span>В сети</span>
+                            {lastSyncedAt && (
+                              <span className="text-[#777] font-normal tabular-nums">
+                                · {format(new Date(lastSyncedAt), 'HH:mm:ss')}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-amber-400">Офлайн / ожидание сети</span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={handleRunDiagnostic}
+                          disabled={isTestingSync}
+                          className="flex items-center gap-1.5 text-xs text-[#00BCC5] hover:bg-[#00BCC5]/15 bg-[#00BCC5]/10 border border-[#00BCC5]/30 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Activity size={12} className={isTestingSync ? 'animate-pulse' : ''} />
+                          <span>{isTestingSync ? 'Проверка...' : 'Тест связи'}</span>
+                        </button>
+                        <button
+                          onClick={handleManualSync}
+                          disabled={isSyncingManual}
+                          className="flex items-center gap-1.5 text-xs text-[#8A8F98] hover:text-[#F7F8F8] bg-[#222226] hover:bg-[#2C2C32] px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                        >
+                          <RefreshCw size={12} className={isSyncingManual ? 'animate-spin text-[#00BCC5]' : ''} />
+                          <span>Синхронизировать</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={handleManualSync}
-                      disabled={isSyncingManual}
-                      className="flex items-center gap-1.5 text-xs text-[#8A8F98] hover:text-[#F7F8F8] bg-[#222226] hover:bg-[#2C2C32] px-2.5 py-1 rounded-md transition-colors"
-                    >
-                      <RefreshCw size={12} className={isSyncingManual ? 'animate-spin text-[#00BCC5]' : ''} />
-                      <span>Синхронизировать сейчас</span>
-                    </button>
+                    {lastSyncError && (
+                      <div className="p-2.5 bg-red-950/30 border border-red-800/40 rounded-lg text-[11px] text-red-300 break-words">
+                        Ошибка синхронизации: {lastSyncError}
+                      </div>
+                    )}
+
+                    {diagResult && (
+                      <div
+                        className={`p-2.5 rounded-lg border text-[11px] space-y-1 ${
+                          diagResult.ok
+                            ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-300'
+                            : 'bg-red-950/30 border-red-800/40 text-red-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between font-medium">
+                          <span>
+                            {diagResult.ok
+                              ? 'Тест пройден: запись и чтение с сервера работают'
+                              : 'Тест не пройден'}
+                          </span>
+                          <span className="font-mono tabular-nums">{diagResult.latencyMs} мс</span>
+                        </div>
+                        {diagResult.error && (
+                          <p className="text-red-200/80 break-words">{diagResult.error}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {syncSuccessMessage && (

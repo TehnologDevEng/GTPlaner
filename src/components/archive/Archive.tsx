@@ -1,41 +1,30 @@
 import React, { useState, useMemo } from 'react';
-import { Task, Id } from '@/types';
-import { 
-  Archive as ArchiveIcon, 
-  RotateCcw, 
-  Trash2, 
-  Search, 
-  Filter, 
-  Calendar, 
-  CheckCircle2, 
-  Sparkles,
-  Inbox,
+import { CustomColumnTitles, Task } from '@/types';
+import {
+  Archive as ArchiveIcon,
+  RotateCcw,
+  Trash2,
+  Search,
+  Calendar,
+  CheckCircle2,
   Clock,
-  ArrowUpRight,
-  SlidersHorizontal,
-  ChevronDown
 } from 'lucide-react';
-import { format, isToday, isYesterday, parseISO } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { BOARD_COLUMNS, COLUMN_META, getColumnTitle } from '@/constants/columns';
 
 interface Props {
   tasks: Task[];
+  customColumnTitles: CustomColumnTitles;
   onRestore: (id: string) => void;
   onDeletePermanently: (id: string) => void;
   onArchiveCompleted: () => void;
   onClearArchive: (olderThanDays?: number) => void;
 }
 
-const COLUMN_NAMES: Record<string, { title: string; color: string; bg: string }> = {
-  focus: { title: 'Главный фокус', color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-800/40' },
-  tasks: { title: 'Задачи дня', color: 'text-[#00BCC5]', bg: 'bg-[#00BCC5]/10 border-[#00BCC5]/30' },
-  habits: { title: 'Привычки', color: 'text-purple-400', bg: 'bg-purple-950/40 border-purple-800/40' },
-  personal: { title: 'Личное', color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-800/40' },
-  inbox: { title: 'Инбокс', color: 'text-blue-400', bg: 'bg-blue-950/40 border-blue-800/40' },
-};
-
 export function Archive({
   tasks,
+  customColumnTitles,
   onRestore,
   onDeletePermanently,
   onArchiveCompleted,
@@ -46,48 +35,49 @@ export function Archive({
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [confirmClear, setConfirmClear] = useState(false);
 
-  // All archived tasks
   const archivedTasks = useMemo(() => {
-    return tasks.filter(t => t.columnId === 'archive');
+    return tasks.filter((t) => t.columnId === 'archive');
   }, [tasks]);
 
-  // Tasks still checked on the active board
+  // Exclude habits since habits reset daily instead of archiving
   const completedOnBoardCount = useMemo(() => {
-    return tasks.filter(t => t.checked && t.columnId !== 'archive').length;
+    return tasks.filter((t) => t.checked && t.columnId !== 'archive' && t.columnId !== 'habits').length;
   }, [tasks]);
 
-  // Filtered archived tasks
+  const categoryFilters = useMemo(
+    () => [
+      { id: 'all', label: 'Все' },
+      ...BOARD_COLUMNS.map((c) => ({
+        id: c.id,
+        label: getColumnTitle(c.id, customColumnTitles),
+      })),
+      { id: 'inbox', label: 'Инбокс' },
+    ],
+    [customColumnTitles]
+  );
+
   const filteredTasks = useMemo(() => {
-    return archivedTasks.filter(task => {
-      // 1. Text search
+    return archivedTasks.filter((task) => {
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        if (!task.content.toLowerCase().includes(query)) {
-          return false;
-        }
+        const inContent = task.content.toLowerCase().includes(query);
+        const inNotes = (task.notes || '').toLowerCase().includes(query);
+        if (!inContent && !inNotes) return false;
       }
 
-      // 2. Category filter
       if (selectedCategory !== 'all') {
         const origin = task.originalColumnId || 'tasks';
-        if (origin !== selectedCategory) {
-          return false;
-        }
+        if (origin !== selectedCategory) return false;
       }
 
-      // 3. Period filter
-      if (selectedPeriod !== 'all' && task.archivedAt) {
-        const taskDate = new Date(task.archivedAt).getTime();
-        const now = Date.now();
-        if (selectedPeriod === 'today') {
-          const oneDay = 24 * 60 * 60 * 1000;
-          if (now - taskDate > oneDay) return false;
-        } else if (selectedPeriod === 'week') {
-          const sevenDays = 7 * 24 * 60 * 60 * 1000;
-          if (now - taskDate > sevenDays) return false;
-        } else if (selectedPeriod === 'month') {
-          const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-          if (now - taskDate > thirtyDays) return false;
+      if (selectedPeriod !== 'all') {
+        const raw = task.archivedAt || task.completedAt;
+        if (raw) {
+          const taskDate = new Date(raw).getTime();
+          const now = Date.now();
+          if (selectedPeriod === 'today' && now - taskDate > 24 * 60 * 60 * 1000) return false;
+          if (selectedPeriod === 'week' && now - taskDate > 7 * 24 * 60 * 60 * 1000) return false;
+          if (selectedPeriod === 'month' && now - taskDate > 30 * 24 * 60 * 60 * 1000) return false;
         }
       }
 
@@ -95,215 +85,187 @@ export function Archive({
     });
   }, [archivedTasks, searchQuery, selectedCategory, selectedPeriod]);
 
-  // Group filtered tasks by Date label
   const groupedTasks = useMemo(() => {
     const groups: Record<string, Task[]> = {};
+    const sorted = [...filteredTasks].sort((a, b) => {
+      const aTime = new Date(a.archivedAt || a.completedAt || 0).getTime();
+      const bTime = new Date(b.archivedAt || b.completedAt || 0).getTime();
+      return bTime - aTime;
+    });
 
-    filteredTasks.forEach(task => {
+    sorted.forEach((task) => {
       let label = 'Ранее';
-      if (task.archivedAt) {
+      const raw = task.archivedAt || task.completedAt;
+      if (raw) {
         try {
-          const date = new Date(task.archivedAt);
-          if (isToday(date)) {
-            label = 'Сегодня';
-          } else if (isYesterday(date)) {
-            label = 'Вчера';
-          } else {
-            label = format(date, 'd MMMM yyyy', { locale: ru });
-          }
-        } catch {
-          label = 'Ранее';
-        }
-      } else if (task.completedAt) {
-        try {
-          const date = new Date(task.completedAt);
-          if (isToday(date)) {
-            label = 'Сегодня';
-          } else if (isYesterday(date)) {
-            label = 'Вчера';
-          } else {
-            label = format(date, 'd MMMM yyyy', { locale: ru });
-          }
+          const date = new Date(raw);
+          if (isToday(date)) label = 'Сегодня';
+          else if (isYesterday(date)) label = 'Вчера';
+          else label = format(date, 'd MMMM yyyy', { locale: ru });
         } catch {
           label = 'Ранее';
         }
       }
 
-      if (!groups[label]) {
-        groups[label] = [];
-      }
+      if (!groups[label]) groups[label] = [];
       groups[label].push(task);
     });
 
     return groups;
   }, [filteredTasks]);
 
-  // Metrics
-  const totalArchived = archivedTasks.length;
-  const completedTodayCount = archivedTasks.filter(t => {
-    if (!t.archivedAt && !t.completedAt) return false;
+  const formatTime = (iso?: string) => {
+    if (!iso) return '';
     try {
-      const d = new Date(t.archivedAt || t.completedAt!);
-      return isToday(d);
+      return format(new Date(iso), 'HH:mm');
     } catch {
-      return false;
+      return '';
     }
-  }).length;
+  };
 
   return (
-    <div className="flex flex-col h-full bg-[#000000] overflow-y-auto">
+    <div className="flex flex-col h-full bg-[#000000]">
       {/* Header */}
-      <div className="px-8 pt-8 pb-6 border-b border-[#1C1C1E] bg-[#0A0A0B]/60 backdrop-blur-md sticky top-0 z-20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <header className="shrink-0 border-b border-[#222222] px-4 sm:px-6 md:px-8 py-4 sm:py-5 bg-[#000000]/80 backdrop-blur-md z-10 sticky top-0 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#00BCC5]/10 border border-[#00BCC5]/30 flex items-center justify-center text-[#00BCC5]">
-              <ArchiveIcon size={20} />
+              <ArchiveIcon size={18} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold text-[#F7F8F8] tracking-tight">Архив выполненных задач</h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#18181B] text-[#8A8F98] border border-[#262628]">
-                  {totalArchived} в архиве
-                </span>
-              </div>
-              <p className="text-xs text-[#8A8F98] mt-0.5">
-                Структурированная история закрытых задач с возможностью быстрого поиска и возврата на доску
+              <h1 className="text-base font-semibold text-[#F7F8F8] tracking-tight">Архив задач</h1>
+              <p className="text-xs text-[#8A8F98] tabular-nums">
+                {archivedTasks.length > 0
+                  ? `Сохранено в истории: ${archivedTasks.length}`
+                  : 'Выполненные задачи структурируются по дням'}
               </p>
             </div>
           </div>
 
-          {/* Quick action buttons */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {completedOnBoardCount > 0 && (
               <button
                 onClick={onArchiveCompleted}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F7F8F8] bg-[#00BCC5] hover:bg-[#00A5AD] active:scale-95 rounded-lg transition-all shadow-md shadow-[#00BCC5]/20"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#F7F8F8] bg-[#00BCC5] hover:bg-[#00A5AD] active:scale-95 rounded-lg transition-all shadow-md shadow-[#00BCC5]/20 cursor-pointer whitespace-nowrap"
               >
-                <ArchiveIcon size={14} />
-                <span>Архивировать выполненные с доски ({completedOnBoardCount})</span>
+                <CheckCircle2 size={14} />
+                <span>Архивировать выполненные ({completedOnBoardCount})</span>
               </button>
             )}
 
-            {confirmClear ? (
-              <div className="flex items-center gap-1.5 bg-[#1C1212] border border-red-900/50 p-1 rounded-lg">
-                <button
-                  onClick={() => {
-                    onClearArchive();
-                    setConfirmClear(false);
-                  }}
-                  className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 font-medium"
-                >
-                  Очистить всё
-                </button>
-                <button
-                  onClick={() => setConfirmClear(false)}
-                  className="px-2 py-1 text-xs text-[#8A8F98] hover:text-[#F7F8F8]"
-                >
-                  Отмена
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmClear(true)}
-                disabled={totalArchived === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#8A8F98] hover:text-[#EA4335] hover:bg-[#1A1A1E] border border-[#262628] rounded-lg transition-colors disabled:opacity-30"
-              >
-                <Trash2 size={13} />
-                <span>Очистить архив</span>
-              </button>
+            {archivedTasks.length > 0 && (
+              <>
+                {confirmClear ? (
+                  <div className="flex items-center gap-1.5 bg-red-950/40 border border-red-800/40 px-2.5 py-1 rounded-lg">
+                    <span className="text-[11px] text-red-300">Удалить всё?</span>
+                    <button
+                      onClick={() => {
+                        onClearArchive();
+                        setConfirmClear(false);
+                      }}
+                      className="text-[11px] font-semibold text-red-400 hover:text-red-300 underline px-1 cursor-pointer"
+                    >
+                      Да
+                    </button>
+                    <button
+                      onClick={() => setConfirmClear(false)}
+                      className="text-[11px] text-[#8A8F98] hover:text-[#F7F8F8] px-1 cursor-pointer"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmClear(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#8A8F98] hover:text-[#EA4335] hover:bg-[#1A1A1E] border border-[#28282C] rounded-lg transition-colors cursor-pointer"
+                    title="Очистить весь архив"
+                  >
+                    <Trash2 size={14} />
+                    <span className="hidden sm:inline">Очистить</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Search and filter toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6">
-          {/* Search box */}
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#666]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Поиск по названию задачи..."
-              className="w-full bg-[#141416] border border-[#242426] focus:border-[#00BCC5]/50 rounded-xl pl-9 pr-8 py-2 text-xs text-[#F7F8F8] placeholder-[#555] focus:outline-none transition-colors"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#666] hover:text-[#AAA]"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {[
-              { id: 'all', label: 'Все категории' },
-              { id: 'focus', label: 'Фокус' },
-              { id: 'tasks', label: 'Задачи' },
-              { id: 'habits', label: 'Привычки' },
-              { id: 'personal', label: 'Личное' },
-              { id: 'inbox', label: 'Инбокс' },
-            ].map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
-                  selectedCategory === cat.id
-                    ? 'bg-[#1E1E22] text-[#00BCC5] border-[#00BCC5]/40 shadow-sm'
-                    : 'bg-[#141416] text-[#8A8F98] border-[#222224] hover:text-[#D1D5DB] hover:bg-[#1A1A1E]'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Period selector */}
-          <select
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as any)}
-            className="bg-[#141416] border border-[#242426] text-xs text-[#8A8F98] rounded-xl px-3 py-2 focus:outline-none focus:border-[#00BCC5]/50 shrink-0"
-          >
-            <option value="all">За все время</option>
-            <option value="today">Только сегодня</option>
-            <option value="week">За последние 7 дней</option>
-            <option value="month">За последние 30 дней</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Main content area */}
-      <div className="flex-1 px-8 py-6 max-w-5xl w-full">
-        {totalArchived === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center max-w-md mx-auto space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#141416] border border-[#262628] flex items-center justify-center text-[#555]">
-              <CheckCircle2 size={28} />
+        {/* Search & Filters */}
+        {archivedTasks.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Поиск по архиву..."
+                className="w-full pl-9 pr-3 py-1.5 bg-[#121214] border border-[#262628] focus:border-[#00BCC5]/60 rounded-lg text-xs text-[#F7F8F8] placeholder-[#555] focus:outline-none transition-colors"
+              />
             </div>
-            <div>
-              <h3 className="text-base font-medium text-[#F7F8F8]">Архив пока пуст</h3>
-              <p className="text-xs text-[#8A8F98] mt-1.5 leading-relaxed">
-                Выполняйте задачи на доске дня. В конце дня или по кнопке они автоматически переносятся сюда с сохранением даты и исходной категории.
-              </p>
+
+            {/* Category filter tabs */}
+            <div className="flex items-center gap-1 bg-[#121214] p-1 rounded-lg border border-[#242426] overflow-x-auto max-w-full">
+              {categoryFilters.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat.id
+                      ? 'bg-[#222226] text-[#F7F8F8] font-medium shadow-sm'
+                      : 'text-[#8A8F98] hover:text-[#D1D5DB]'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
+
+            {/* Period selector */}
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value as 'all' | 'today' | 'week' | 'month')}
+              className="bg-[#121214] border border-[#242426] text-[#D1D5DB] text-xs px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-[#00BCC5]/60 cursor-pointer"
+            >
+              <option value="all">За все время</option>
+              <option value="today">За сегодня</option>
+              <option value="week">За 7 дней</option>
+              <option value="month">За 30 дней</option>
+            </select>
+          </div>
+        )}
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-8 py-6 max-w-4xl w-full">
+        {archivedTasks.length === 0 ? (
+          <div className="h-[55vh] flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-[#121214] border border-[#222226] flex items-center justify-center text-[#444]">
+              <ArchiveIcon size={28} />
+            </div>
+            <h3 className="text-base font-medium text-[#D1D5DB]">Архив пока пуст</h3>
+            <p className="text-xs text-[#777] leading-relaxed">
+              Выполненные задачи на доске автоматически переносятся сюда при смене дня с сохранением даты и категории. Привычки остаются на доске и копят серию.
+            </p>
             {completedOnBoardCount > 0 && (
               <button
                 onClick={onArchiveCompleted}
-                className="mt-2 flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#00BCC5] hover:bg-[#00A5AD] rounded-xl transition-all shadow-md shadow-[#00BCC5]/20"
+                className="mt-2 flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#00BCC5] hover:bg-[#00A5AD] rounded-xl transition-all shadow-md shadow-[#00BCC5]/20 cursor-pointer"
               >
-                <ArchiveIcon size={14} />
-                <span>Архивировать выполненные задачи ({completedOnBoardCount})</span>
+                <CheckCircle2 size={14} />
+                <span>Перенести выполненные с доски ({completedOnBoardCount})</span>
               </button>
             )}
           </div>
         ) : filteredTasks.length === 0 ? (
-          <div className="text-center py-16 text-[#8A8F98]">
-            <p className="text-sm">Ничего не найдено по заданным фильтрам.</p>
+          <div className="py-16 text-center space-y-2">
+            <p className="text-sm text-[#8A8F98]">По вашему фильтру ничего не найдено</p>
             <button
-              onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setSelectedPeriod('all'); }}
-              className="mt-2 text-xs text-[#00BCC5] hover:underline"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedCategory('all');
+                setSelectedPeriod('all');
+              }}
+              className="mt-2 text-xs text-[#00BCC5] hover:underline cursor-pointer"
             >
               Сбросить фильтры
             </button>
@@ -312,7 +274,6 @@ export function Archive({
           <div className="space-y-8">
             {(Object.entries(groupedTasks) as [string, Task[]][]).map(([dateLabel, groupTasks]) => (
               <section key={dateLabel} className="space-y-3">
-                {/* Date header */}
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-[#00BCC5]" />
@@ -320,76 +281,67 @@ export function Archive({
                       {dateLabel}
                     </h2>
                   </div>
-                  <span className="text-[11px] text-[#666]">
-                    ({groupTasks.length} {groupTasks.length === 1 ? 'задача' : 'задач'})
+                  <div className="h-[1px] flex-1 bg-[#1E1E22]" />
+                  <span className="text-[11px] text-[#666] tabular-nums">
+                    {groupTasks.length}
                   </span>
-                  <div className="flex-1 h-px bg-[#1C1C1F]" />
                 </div>
 
-                {/* Tasks in this group */}
-                <div className="grid grid-cols-1 gap-2.5">
-                  {groupTasks.map(task => {
-                    const originKey = task.originalColumnId || 'tasks';
-                    const categoryInfo = COLUMN_NAMES[originKey] || {
-                      title: 'Задачи',
-                      color: 'text-[#8A8F98]',
-                      bg: 'bg-[#18181B] border-[#262628]',
-                    };
-
-                    let timeStr = '';
-                    if (task.completedAt || task.archivedAt) {
-                      try {
-                        const d = new Date(task.completedAt || task.archivedAt!);
-                        timeStr = format(d, 'HH:mm');
-                      } catch {
-                        timeStr = '';
-                      }
-                    }
+                <div className="space-y-2">
+                  {groupTasks.map((task) => {
+                    const originId = task.originalColumnId || 'tasks';
+                    const colMeta = COLUMN_META[originId] || COLUMN_META.tasks;
+                    const colLabel = getColumnTitle(originId, customColumnTitles);
+                    const timeStr = formatTime(task.completedAt || task.archivedAt);
 
                     return (
                       <div
                         key={task.id}
-                        className="bg-[#141416] border border-[#222225] hover:border-[#333338] rounded-xl p-3.5 flex items-center justify-between gap-4 transition-all group shadow-sm"
+                        className="group bg-[#121214] border border-[#222226] hover:border-[#343438] rounded-xl p-3.5 transition-all flex items-center justify-between gap-4"
                       >
-                        {/* Task info */}
-                        <div className="flex items-center gap-3 min-w-0">
-                          <CheckCircle2 size={16} className="text-[#00BCC5] shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-[#8A8F98] line-through tracking-tight truncate group-hover:text-[#A0A5AE] transition-colors">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className="mt-0.5 text-emerald-500/80 shrink-0">
+                            <CheckCircle2 size={15} />
+                          </div>
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <p className="text-sm text-[#A1A1AA] group-hover:text-[#D1D5DB] transition-colors line-through decoration-[#444] break-words">
                               {task.content}
                             </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span
-                                className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${categoryInfo.bg} ${categoryInfo.color}`}
-                              >
-                                {categoryInfo.title}
+                            <div className="flex items-center flex-wrap gap-2 text-[11px] text-[#666] tabular-nums">
+                              <span className={`inline-flex items-center gap-1.5 ${colMeta.textColor}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${colMeta.dotColor}`} />
+                                {colLabel}
                               </span>
                               {timeStr && (
-                                <span className="flex items-center gap-1 text-[10px] text-[#666]">
-                                  <Clock size={10} />
-                                  <span>{timeStr}</span>
-                                </span>
+                                <>
+                                  <span aria-hidden="true">·</span>
+                                  <span className="inline-flex items-center gap-1">
+                                    <Clock size={10} />
+                                    {timeStr}
+                                  </span>
+                                </>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        {/* Action buttons */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             onClick={() => onRestore(task.id)}
-                            title={`Вернуть в "${categoryInfo.title}"`}
-                            className="flex items-center gap-1.5 text-xs text-[#00BCC5] hover:text-[#56D8DE] bg-[#00BCC5]/10 hover:bg-[#00BCC5]/20 border border-[#00BCC5]/30 px-3 py-1.5 rounded-lg font-medium transition-all"
+                            className="flex items-center gap-1.5 text-xs text-[#00BCC5] hover:text-[#56D8DE] bg-[#00BCC5]/10 hover:bg-[#00BCC5]/20 border border-[#00BCC5]/30 px-2.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap"
+                            title={`Вернуть в «${colLabel}»`}
                           >
                             <RotateCcw size={13} />
-                            <span className="hidden sm:inline">Вернуть на доску</span>
+                            <span className="hidden sm:inline">Вернуть</span>
                           </button>
+
                           <button
                             onClick={() => onDeletePermanently(task.id)}
+                            className="p-1.5 text-[#555] hover:text-[#EA4335] hover:bg-[#EA4335]/10 rounded-lg transition-colors cursor-pointer"
                             title="Удалить навсегда"
-                            className="p-1.5 text-[#666] hover:text-[#EA4335] hover:bg-[#1E1E22] rounded-lg transition-colors"
+                            aria-label="Удалить задачу навсегда"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </div>

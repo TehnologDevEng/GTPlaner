@@ -11,16 +11,29 @@ interface Props {
   tasks: Task[];
   onToggleTask: (id: string) => void;
   onAddTask: (columnId: string, content: string) => void;
+  onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onDeleteTask: (id: string) => void;
+  onSelectTask: (task: Task) => void;
   isDragging?: boolean;
 }
 
-export const InboxSidebar: React.FC<Props> = ({ isOpen, onClose, tasks, onToggleTask, onAddTask, isDragging }) => {
+export const InboxSidebar: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  tasks,
+  onToggleTask,
+  onAddTask,
+  onUpdateTask,
+  onDeleteTask,
+  onSelectTask,
+  isDragging,
+}) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskText, setNewTaskText] = useState('');
 
   const { setNodeRef, isOver } = useDroppable({
     id: 'inbox',
-    data: { type: 'Column', column: { id: 'inbox', title: 'Инбокс' } }
+    data: { type: 'Column', column: { id: 'inbox', title: 'Инбокс' } },
   });
 
   const handleAdd = (e: React.FormEvent) => {
@@ -35,59 +48,88 @@ export const InboxSidebar: React.FC<Props> = ({ isOpen, onClose, tasks, onToggle
   return (
     <>
       {isOpen && (
-        <div 
-          className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity ${isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        <div
+          className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity ${
+            isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
           onClick={onClose}
         />
       )}
-      <div 
-        className={`fixed top-0 right-0 h-full w-80 bg-[#0E0E0F] border-l border-[#222222] z-50 transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${
+      <div
+        className={`fixed top-0 right-0 h-full w-full sm:w-80 bg-[#0E0E0F] border-l border-[#222222] z-50 transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         } ${isDragging ? 'pointer-events-none' : ''}`}
       >
-        <div className="h-[60px] shrink-0 border-b border-[#222222] flex items-center justify-between px-6 bg-[#0E0E0F]">
-          <div className="flex items-center gap-3 text-[#F7F8F8]">
-            <Inbox size={18} className="text-[#00BCC5]" />
-            <span className="font-medium tracking-tight">Инбокс</span>
+        <div className="h-[60px] shrink-0 border-b border-[#222222] flex items-center justify-between px-5 bg-[#0E0E0F]">
+          <div className="flex items-center gap-2.5 text-[#F7F8F8]">
+            <Inbox size={17} className="text-[#00BCC5]" />
+            <span className="font-medium tracking-tight text-sm">Инбокс</span>
+            <span className="text-xs text-[#8A8F98] tabular-nums">{tasks.length}</span>
           </div>
-          <button onClick={onClose} className="text-[#8A8F98] hover:text-[#F7F8F8] transition-colors">
-            <X size={18} />
+          <button
+            onClick={onClose}
+            className="p-1.5 text-[#8A8F98] hover:text-[#F7F8F8] hover:bg-[#1C1C20] rounded-lg transition-colors cursor-pointer"
+            aria-label="Закрыть Инбокс"
+          >
+            <X size={17} />
           </button>
         </div>
-        
-        <div 
+
+        <div
           ref={setNodeRef}
-          className={`flex-1 overflow-y-auto p-4 space-y-2 transition-colors ${isOver ? 'bg-[#1A1A1C]/50' : ''}`}
+          className={`flex-1 overflow-y-auto p-4 space-y-2 transition-colors ${
+            isOver ? 'bg-[#1A1A1C]/50' : ''
+          }`}
         >
-          <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            {tasks.map(task => (
-              <SortableTask key={task.id} task={task} onToggle={onToggleTask} />
+          <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            {tasks.map((task) => (
+              <SortableTask
+                key={task.id}
+                task={task}
+                onToggle={onToggleTask}
+                onUpdate={onUpdateTask}
+                onDelete={onDeleteTask}
+                onSelect={onSelectTask}
+              />
             ))}
           </SortableContext>
+
+          {tasks.length === 0 && !isAdding && (
+            <p className="text-xs text-[#666] text-center py-8 px-4 leading-relaxed">
+              Скидывайте сюда быстрые мысли и идеи, а позже перетаскивайте их в нужные колонки дня.
+            </p>
+          )}
 
           {isAdding ? (
             <form onSubmit={handleAdd} className="mt-2">
               <input
                 type="text"
                 autoFocus
+                maxLength={500}
                 value={newTaskText}
                 onChange={(e) => setNewTaskText(e.target.value)}
-                onBlur={() => setIsAdding(false)}
+                onBlur={handleAdd}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setNewTaskText('');
+                    setIsAdding(false);
+                  }
+                }}
                 className="w-full bg-[#161618] border border-[#00BCC5] rounded-xl p-3 text-[13px] text-[#F7F8F8] outline-none shadow-sm"
                 placeholder="Быстрая мысль..."
               />
             </form>
           ) : (
-            <button 
+            <button
               onClick={() => setIsAdding(true)}
-              className="flex items-center gap-2 text-[13px] text-[#8A8F98] hover:text-[#F7F8F8] p-3 border border-dashed border-[#333] hover:border-[#555] hover:bg-[#1A1A1C] rounded-xl transition-all mt-2 w-full text-left font-medium"
+              className="flex items-center gap-2 text-[13px] text-[#8A8F98] hover:text-[#F7F8F8] p-3 border border-dashed border-[#333] hover:border-[#555] hover:bg-[#1A1A1C] rounded-xl transition-all mt-2 w-full text-left font-medium cursor-pointer"
             >
               <Plus size={14} />
-              Добавить в инбокс
+              <span>Добавить в инбокс</span>
             </button>
           )}
         </div>
       </div>
     </>
   );
-}
+};

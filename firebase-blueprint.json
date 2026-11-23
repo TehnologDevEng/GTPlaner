@@ -1,0 +1,131 @@
+{
+  "entities": {
+    "Task": {
+      "title": "Task",
+      "description": "A user task, habit, inbox item, or archived item synchronized across devices.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique task identifier."
+        },
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the task owner."
+        },
+        "columnId": {
+          "type": "string",
+          "enum": ["focus", "tasks", "calls", "habits", "personal", "inbox", "archive"],
+          "maxLength": 32,
+          "description": "Current column or bucket where the task lives."
+        },
+        "originalColumnId": {
+          "type": "string",
+          "enum": ["focus", "tasks", "calls", "habits", "personal", "inbox", "archive"],
+          "maxLength": 32,
+          "description": "Origin column preserved when a task is archived so it can be restored accurately."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Primary task text."
+        },
+        "checked": {
+          "type": "boolean",
+          "description": "Whether the task is currently marked complete."
+        },
+        "order": {
+          "type": "number",
+          "description": "Ordering weight within the board."
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 5000,
+          "description": "Optional detailed notes for the task."
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "maxLength": 16,
+          "description": "Optional priority level."
+        },
+        "subtasks": {
+          "type": "array",
+          "description": "Bounded list (max 30) of subtask objects { id, content, checked }."
+        },
+        "streak": {
+          "type": "number",
+          "description": "Consecutive completion streak count for habits."
+        },
+        "lastCompletedDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Last calendar date (yyyy-MM-dd) when a habit was completed."
+        },
+        "habitHistory": {
+          "type": "array",
+          "description": "Bounded list (max 60) of yyyy-MM-dd completion date strings for habit analytics."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64,
+          "description": "ISO timestamp when task was completed."
+        },
+        "archivedAt": {
+          "type": "string",
+          "format": "date-time",
+          "maxLength": 64,
+          "description": "ISO timestamp when task was archived."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last modification."
+        }
+      },
+      "required": ["id", "ownerId", "columnId", "content", "checked", "order", "updatedAt"]
+    },
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "Per-user workspace preferences including custom column titles and rollover tracking.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the owner."
+        },
+        "lastRolloverDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Last yyyy-MM-dd date on which daily archive and habit reset ran."
+        },
+        "columnTitles": {
+          "type": "object",
+          "description": "Optional map of custom display names for board columns."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last preference update."
+        }
+      },
+      "required": ["ownerId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Private tasks, habits, inbox items, and archived records owned by userId."
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/UserPreferences" },
+      "description": "Private workspace preferences (preferences, sync_probe) owned by userId."
+    }
+  }
+}
