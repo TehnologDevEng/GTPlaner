@@ -7,13 +7,22 @@ import { AudioProvider } from './context/AudioContext';
 import { PomodoroProvider } from './context/PomodoroContext';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
-// Register PWA service worker if supported
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.log('SW registration note:', err);
+// Register PWA service worker in production; unregister stale SW in dev
+if ('serviceWorker' in navigator) {
+  if (process.env.NODE_ENV === 'production') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('./sw.js')
+        .then((reg) => reg.update().catch(() => {}))
+        .catch((err) => {
+          console.log('SW registration note:', err);
+        });
     });
-  });
+  } else {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => reg.unregister());
+    });
+  }
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -13,7 +13,6 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
     const countsByDate: Record<string, number> = {};
 
     tasks.forEach((t) => {
-      // Count habit completion history dates
       if (t.columnId === 'habits' && Array.isArray(t.habitHistory) && t.habitHistory.length > 0) {
         t.habitHistory.forEach((dayKey) => {
           countsByDate[dayKey] = (countsByDate[dayKey] || 0) + 1;
@@ -21,7 +20,6 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
         return;
       }
 
-      // Count completed or archived tasks by their date
       const rawDate = t.completedAt || (t.columnId === 'archive' ? t.archivedAt : undefined);
       if (rawDate && (t.checked || t.columnId === 'archive')) {
         try {
@@ -73,7 +71,7 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
   }, [tasks]);
 
   const getHeatColor = (count: number) => {
-    if (count === 0) return 'bg-[#1D1D21]';
+    if (count === 0) return 'bg-[#1C1C20]';
     if (count === 1) return 'bg-[#00BCC5]/30';
     if (count <= 3) return 'bg-[#00BCC5]/55';
     if (count <= 5) return 'bg-[#00BCC5]/80';
@@ -81,19 +79,19 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
   };
 
   return (
-    <div className="bg-[#161618] border border-[#2A2A2A] rounded-2xl p-6 md:col-span-2 flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="bg-[#121214] border border-[#222226] rounded-2xl p-5 sm:p-6 flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-[#8A8F98] text-xs uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-[13px] font-medium text-[#8A8F98] flex items-center gap-2">
             <BarChart3 size={14} className="text-[#00BCC5]" />
             <span>Активность за 7 дней</span>
-          </p>
-          <div className="flex items-baseline gap-3 mt-1.5 text-xs text-[#8A8F98] tabular-nums">
+          </h2>
+          <div className="flex items-baseline gap-2.5 mt-2 text-xs text-[#8A8F98] tabular-nums">
             <span>
-              Выполнено за неделю:{' '}
+              За неделю:{' '}
               <strong className="text-[#F7F8F8] font-semibold">{total7}</strong>
             </span>
-            <span aria-hidden="true">·</span>
+            <span aria-hidden="true" className="text-[#444]">·</span>
             <span>
               Лучший день:{' '}
               <strong className="text-[#F7F8F8] font-semibold">{bestDayCount}</strong>
@@ -102,8 +100,8 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
         </div>
 
         {/* Compact 28-day mini heatmap */}
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-[10px] text-[#666]">Последние 28 дней</span>
+        <div className="flex flex-col sm:items-end gap-1.5">
+          <span className="text-[11px] text-[#6E727A]">Последние 28 дней</span>
           <div className="grid grid-cols-14 gap-1">
             {last28Days.map((day) => (
               <div
@@ -117,7 +115,7 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
       </div>
 
       {/* 7-day bar chart */}
-      <div className="grid grid-cols-7 gap-2 sm:gap-4 items-end h-28 pt-3">
+      <div className="grid grid-cols-7 gap-2 sm:gap-5 items-end h-28 pt-2">
         {last7Days.map((day) => {
           const heightPct = day.count === 0 ? 6 : Math.max(14, Math.round((day.count / maxCount7) * 100));
           return (
@@ -126,17 +124,17 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
               className="flex flex-col items-center gap-2 h-full justify-end group"
               title={`${day.fullDate}: ${day.count}`}
             >
-              <span className="text-[11px] font-mono tabular-nums text-[#8A8F98] group-hover:text-[#F7F8F8] transition-colors">
+              <span className="text-[11px] font-mono tabular-nums text-[#8A8F98] group-hover:text-[#F7F8F8] transition-colors h-4">
                 {day.count > 0 ? day.count : ''}
               </span>
-              <div className="w-full max-w-[36px] flex-1 flex items-end">
+              <div className="w-full max-w-[40px] flex-1 flex items-end">
                 <div
                   className={`w-full rounded-t-md transition-all duration-300 ${
                     day.isToday
                       ? 'bg-[#00BCC5]'
                       : day.count > 0
                       ? 'bg-[#00BCC5]/45 group-hover:bg-[#00BCC5]/75'
-                      : 'bg-[#222226]'
+                      : 'bg-[#1D1D22]'
                   }`}
                   style={{ height: `${heightPct}%` }}
                 />
@@ -152,6 +150,6 @@ export const WeeklyActivityChart: React.FC<Props> = ({ tasks }) => {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 };
